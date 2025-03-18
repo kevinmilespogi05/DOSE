@@ -91,9 +91,10 @@ const MedicineList = () => {
       setMedicineToDelete(null);
       setIsDeleteModalOpen(false);
       fetchMedicines();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting medicine:', error);
-      setError('Failed to delete medicine');
+      setError(error.response?.data?.message || error.response?.data?.error || 'Failed to delete medicine. Please try again.');
+      setIsDeleteModalOpen(false);
     }
   };
 

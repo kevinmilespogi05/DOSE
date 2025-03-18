@@ -538,7 +538,8 @@ app.get('/api/cart', authenticateToken, async (req: any, res) => {
         ci.quantity,
         m.name,
         m.price,
-        m.unit
+        m.unit,
+        m.image_url
        FROM cart_items ci
        JOIN medicines m ON ci.medicine_id = m.id
        WHERE ci.cart_id = ?`,
@@ -752,19 +753,31 @@ app.delete('/api/medicines/:id', authenticateToken, isAdmin, async (req: any, re
 
     await withTransaction(async (connection: Connection) => {
       // Delete related records in the correct order
-      // 1. Delete cart items
+      // 1. Delete prescription items
+      await connection.execute(
+        'DELETE FROM prescription_items WHERE medicine_id = ?',
+        [id]
+      );
+
+      // 2. Delete cart items
       await connection.execute(
         'DELETE FROM cart_items WHERE medicine_id = ?',
         [id]
       );
 
-      // 2. Delete inventory transactions
+      // 3. Delete order items
+      await connection.execute(
+        'DELETE FROM order_items WHERE medicine_id = ?',
+        [id]
+      );
+
+      // 4. Delete inventory transactions
       await connection.execute(
         'DELETE FROM inventory_transactions WHERE medicine_id = ?',
         [id]
       );
 
-      // 3. Finally delete the medicine
+      // 5. Finally delete the medicine
       await connection.execute(
         'DELETE FROM medicines WHERE id = ?',
         [id]

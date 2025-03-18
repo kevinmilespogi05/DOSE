@@ -136,13 +136,17 @@ const Cart = () => {
                 <div key={item.id} className="p-6 border-b border-gray-200 last:border-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                      {item.image_url && (
+                      <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-md">
                         <img
-                          src={item.image_url}
+                          src={item.image_url || '/images/medicine-placeholder.png'}
                           alt={item.name}
-                          className="w-16 h-16 object-cover rounded-md"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/images/medicine-placeholder.png';
+                          }}
                         />
-                      )}
+                      </div>
                       <div>
                         <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
                         <p className="text-gray-600">{formatPeso(item.price)} per {item.unit}</p>
