@@ -55,12 +55,10 @@ function AppContent() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       {!isAuthPage && <Navbar />}
-      <div className="flex flex-1 relative">
+      <div className="flex flex-1">
         {isAuthenticated && !isAuthPage && <Sidebar />}
-        <main className={`flex-1 overflow-x-hidden overflow-y-auto ${
-          !isAuthenticated || isAuthPage ? 'w-full' : ''
-        } ${isAuthenticated && !isAuthPage ? 'lg:ml-64' : ''}`}>
-          <div className={`container mx-auto px-4 ${isAuthPage ? '' : 'py-8'}`}>
+        <main className={`flex-1 ${isAuthenticated && !isAuthPage ? 'lg:ml-64' : ''}`}>
+          <div className="container mx-auto px-4 py-8">
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<LoginForm />} />
@@ -86,14 +84,11 @@ function AppContent() {
               {/* Payment Routes */}
               <Route path="/payment/success" element={<PaymentSuccess />} />
               <Route path="/payment/failed" element={<PaymentFailed />} />
-              
-              {/* Catch all route */}
-              <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </div>
         </main>
       </div>
-      {!isAuthPage && <Footer />}
+      <Footer />
     </div>
   );
 }

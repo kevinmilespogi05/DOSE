@@ -70,15 +70,16 @@ const Sidebar = () => {
       )}
 
       {/* Sidebar */}
-      <div
+      <aside
         className={`
-          fixed lg:static inset-y-0 left-0 z-50
+          fixed lg:sticky top-0 left-0 z-40
+          h-[100dvh] w-64 bg-white shadow-soft
           transform ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0 transition-all duration-300 ease-in-out
-          w-64 bg-white h-screen shadow-soft
+          lg:translate-x-0 transition-transform duration-300 ease-in-out
+          flex flex-col
         `}
       >
-        <div className="p-6">
+        <div className="p-6 flex-shrink-0">
           <Link to="/" className="block group">
             <h1 className="text-2xl font-bold text-primary-600 transition-colors duration-200 group-hover:text-primary-700">DOSE</h1>
             <p className="text-sm text-gray-600 mt-1 transition-colors duration-200 group-hover:text-gray-700">
@@ -86,43 +87,45 @@ const Sidebar = () => {
             </p>
           </Link>
         </div>
-        <nav className="mt-6 space-y-1 px-3">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setIsMobileOpen(false)}
-                className={`
-                  flex items-center px-4 py-3 rounded-md text-gray-700 
-                  transition-all duration-200 group relative
-                  ${isActive 
-                    ? 'bg-primary-50 text-primary-600 shadow-soft' 
-                    : 'hover:bg-gray-50 hover:text-primary-600'
-                  }
-                `}
-              >
-                <Icon className={`
-                  w-5 h-5 mr-3 transition-transform duration-200 
-                  ${isActive ? 'text-primary-600' : 'text-gray-500 group-hover:text-primary-600'} 
-                  group-hover:scale-110
-                `} />
-                <span className={`
-                  font-medium transition-colors duration-200
-                  ${isActive ? 'text-primary-600' : 'text-gray-700 group-hover:text-primary-600'}
-                `}>
-                  {item.label}
-                </span>
-                {isActive && (
-                  <span className="absolute inset-y-0 left-0 w-1 bg-primary-600 rounded-r-full transition-transform duration-200 transform scale-y-100" />
-                )}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 overflow-y-auto px-3 py-4">
+          <div className="space-y-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setIsMobileOpen(false)}
+                  className={`
+                    flex items-center px-4 py-3 rounded-md text-gray-700 
+                    transition-all duration-200 group relative
+                    ${isActive 
+                      ? 'bg-primary-50 text-primary-600 shadow-soft' 
+                      : 'hover:bg-gray-50 hover:text-primary-600'
+                    }
+                  `}
+                >
+                  <Icon className={`
+                    w-5 h-5 mr-3 transition-transform duration-200 
+                    ${isActive ? 'text-primary-600' : 'text-gray-500 group-hover:text-primary-600'} 
+                    group-hover:scale-110
+                  `} />
+                  <span className={`
+                    font-medium transition-colors duration-200
+                    ${isActive ? 'text-primary-600' : 'text-gray-700 group-hover:text-primary-600'}
+                  `}>
+                    {item.label}
+                  </span>
+                  {isActive && (
+                    <span className="absolute inset-y-0 left-0 w-1 bg-primary-600 rounded-r-full transition-transform duration-200 transform scale-y-100" />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
         </nav>
-      </div>
+      </aside>
     </>
   );
 };
