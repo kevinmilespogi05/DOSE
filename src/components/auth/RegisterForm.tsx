@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { registerSchema, type RegisterFormData } from '../../types/auth';
-import { Pill } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 
 const RegisterForm = () => {
   const { register: registerUser } = useAuth();
@@ -19,10 +19,17 @@ const RegisterForm = () => {
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      await registerUser(data);
-      navigate('/');
+      await registerUser({
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName
+      });
+      // Navigation will be handled by the AuthContext
     } catch (error) {
       console.error('Registration failed:', error);
+      // Display an error message to the user
+      alert('Registration failed. Please try again with a different email address.');
     }
   };
 
@@ -32,7 +39,7 @@ const RegisterForm = () => {
         <div className="text-center">
           <div className="flex justify-center">
             <div className="bg-blue-600 p-3 rounded-full">
-              <Pill className="h-12 w-12 text-white" />
+              <UserPlus className="h-12 w-12 text-white" />
             </div>
           </div>
           <h1 className="mt-4 text-4xl font-extrabold text-blue-600">DOSE</h1>
@@ -49,6 +56,39 @@ const RegisterForm = () => {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="rounded-md shadow-sm space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                  First Name
+                </label>
+                <input
+                  id="firstName"
+                  type="text"
+                  {...register('firstName')}
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="First name"
+                />
+                {errors.firstName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.firstName.message}</p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                  Last Name
+                </label>
+                <input
+                  id="lastName"
+                  type="text"
+                  {...register('lastName')}
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="Last name"
+                />
+                {errors.lastName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>
+                )}
+              </div>
+            </div>
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email address

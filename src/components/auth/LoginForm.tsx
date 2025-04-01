@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { loginSchema, type LoginFormData } from '../../types/auth';
-import { Pill } from 'lucide-react';
+import { UserRound } from 'lucide-react';
 
 const LoginForm = () => {
   const { login } = useAuth();
@@ -20,9 +20,11 @@ const LoginForm = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       await login(data);
-      navigate('/');
+      // Navigation will be handled by the AuthContext
     } catch (error) {
       console.error('Login failed:', error);
+      // Display an error message to the user
+      alert('Login failed. Please check your credentials and try again.');
     }
   };
 
@@ -32,7 +34,7 @@ const LoginForm = () => {
         <div className="text-center">
           <div className="flex justify-center">
             <div className="bg-blue-600 p-3 rounded-full">
-              <Pill className="h-12 w-12 text-white" />
+              <UserRound className="h-12 w-12 text-white" />
             </div>
           </div>
           <h1 className="mt-4 text-4xl font-extrabold text-blue-600">DOSE</h1>

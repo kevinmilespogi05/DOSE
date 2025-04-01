@@ -44,6 +44,10 @@ const UserRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => {
 
 // Public route guard - redirects to dashboard if already authenticated
 const PublicRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => {
+  const { isAuthenticated, isAdmin } = useAuth();
+  if (isAuthenticated) {
+    return <Navigate to={isAdmin ? "/admin" : "/shop"} replace />;
+  }
   return element;
 };
 
@@ -61,8 +65,8 @@ function AppContent() {
           <div className="container mx-auto px-4 py-8">
             <Routes>
               {/* Public Routes */}
-              <Route path="/login" element={<LoginForm />} />
-              <Route path="/register" element={<RegisterForm />} />
+              <Route path="/login" element={<PublicRoute element={<LoginForm />} />} />
+              <Route path="/register" element={<PublicRoute element={<RegisterForm />} />} />
               
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminRoute element={<AdminDashboard />} />} />
