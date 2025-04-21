@@ -57,12 +57,12 @@ function AppContent() {
   const isAuthPage = ['/login', '/register'].includes(location.pathname);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100">
+    <div className="d-flex flex-column min-vh-100">
       {!isAuthPage && <Navbar />}
-      <div className="flex flex-1">
+      <div className="d-flex flex-grow-1">
         {isAuthenticated && !isAuthPage && <Sidebar />}
-        <main className={`flex-1 ${isAuthenticated && !isAuthPage ? 'lg:ml-64' : ''}`}>
-          <div className="container mx-auto px-4 py-8">
+        <main className={`flex-grow-1 py-4 ${isAuthenticated && !isAuthPage ? 'ms-4' : ''}`}>
+          <div className="container">
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<PublicRoute element={<LoginForm />} />} />
@@ -92,7 +92,7 @@ function AppContent() {
           </div>
         </main>
       </div>
-      <Footer />
+      {!isAuthPage && <Footer />}
     </div>
   );
 }

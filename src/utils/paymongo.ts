@@ -5,24 +5,22 @@ const PAYMONGO_PUBLIC_KEY = import.meta.env.VITE_PAYMONGO_PUBLIC_KEY;
 const PAYMONGO_SECRET_KEY = import.meta.env.VITE_PAYMONGO_SECRET_KEY;
 
 interface PaymentMethodData {
-  type: 'gcash' | 'grab_pay' | 'card';
-  details?: {
-    card_number: string;
-    exp_month: number;
-    exp_year: number;
-    cvc: string;
+  type: 'gcash' | 'grab_pay';
+  details: {
+    phone?: string;
+    email?: string;
   };
 }
 
 interface PaymentIntentData {
   amount: number;
-  currency: string;
   payment_method_allowed: string[];
   payment_method_options?: {
     card?: {
       request_three_d_secure: 'any' | 'automatic';
     };
   };
+  currency?: string;
   description?: string;
   statement_descriptor?: string;
   metadata?: Record<string, any>;
@@ -85,31 +83,6 @@ export const createPaymentIntent = async (data: PaymentIntentData) => {
   }
 };
 
-export const attachPaymentIntent = async (paymentIntentId: string, paymentMethodId: string) => {
-  try {
-    const response = await axios.post(
-      `${PAYMONGO_API_URL}/payment_intents/${paymentIntentId}/attach`,
-      {
-        data: {
-          attributes: {
-            payment_method: paymentMethodId,
-          },
-        },
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(PAYMONGO_SECRET_KEY || '')}`,
-        },
-      }
-    );
-    return response.data.data;
-  } catch (error) {
-    console.error('Error attaching payment intent:', error);
-    throw error;
-  }
-};
-
 export const createSource = async (amount: number, type: 'gcash' | 'grab_pay') => {
   try {
     const response = await axios.post(
@@ -124,6 +97,10 @@ export const createSource = async (amount: number, type: 'gcash' | 'grab_pay') =
               success: `${window.location.origin}/payment/success`,
               failed: `${window.location.origin}/payment/failed`,
             },
+            billing: {
+              name: 'Pharmacy Customer',
+              email: 'customer@example.com',
+            },
           },
         },
       },
@@ -137,6 +114,24 @@ export const createSource = async (amount: number, type: 'gcash' | 'grab_pay') =
     return response.data.data;
   } catch (error) {
     console.error('Error creating source:', error);
+    throw error;
+  }
+};
+
+export const verifyPayment = async (sourceId: string) => {
+  try {
+    const response = await axios.get(
+      `${PAYMONGO_API_URL}/sources/${sourceId}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${btoa(PAYMONGO_SECRET_KEY || '')}`,
+        },
+      }
+    );
+    return response.data.data;
+  } catch (error) {
+    console.error('Error verifying payment:', error);
     throw error;
   }
 }; 

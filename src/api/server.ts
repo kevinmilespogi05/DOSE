@@ -387,11 +387,11 @@ app.post('/api/medicines', authenticateToken, isAdmin, async (req: any, res) => 
       });
     }
 
-    // Convert values to appropriate types
+    // Convert values to appropriate types and process name
     const processedData = {
-      name,
-      generic_name: generic_name || null,
-      brand: brand || null,
+      name: name.replace(/\s+/g, ''),
+      generic_name: generic_name ? generic_name.replace(/\s+/g, '') : null,
+      brand: brand ? brand.replace(/\s+/g, '') : null,
       category_id: category_id ? parseInt(category_id) : null,
       description: description || null,
       price: parseFloat(price),
@@ -691,7 +691,7 @@ app.put('/api/medicines/:id', authenticateToken, isAdmin, async (req: any, res) 
       return res.status(404).json({ message: 'Medicine not found' });
     }
 
-    // Update medicine
+    // Update medicine with processed names
     await execute(
       `UPDATE medicines SET
         name = ?,
@@ -711,9 +711,9 @@ app.put('/api/medicines/:id', authenticateToken, isAdmin, async (req: any, res) 
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?`,
       [
-        name,
-        generic_name || null,
-        brand || null,
+        name.replace(/\s+/g, ''),
+        generic_name ? generic_name.replace(/\s+/g, '') : null,
+        brand ? brand.replace(/\s+/g, '') : null,
         category_id || null,
         description || null,
         price,
@@ -805,8 +805,7 @@ app.post('/api/orders', authenticateToken, async (req: any, res) => {
 
   try {
     const result = await withTransaction(async () => {
-      // Calculate total amount and verify stock
-      let totalAmount = 0;
+      // Calculate total amount and verify stock in bulk
       const medicineIds = items.map(item => item.medicine_id);
       const placeholders = medicineIds.map(() => '?').join(',');
       const medicines = await query(
@@ -815,7 +814,9 @@ app.post('/api/orders', authenticateToken, async (req: any, res) => {
       );
 
       const medicineMap = new Map(medicines.map(m => [m.id, m]));
+      let totalAmount = 0;
 
+      // Verify all items have sufficient stock
       for (const item of items) {
         const medicine = medicineMap.get(item.medicine_id);
         if (!medicine) {
@@ -834,22 +835,34 @@ app.post('/api/orders', authenticateToken, async (req: any, res) => {
         [orderId, userId, totalAmount, 'pending_payment']
       );
 
-      // Create order items
-      for (const item of items) {
+      // Create order items in bulk
+      const orderItemsValues = items.map(item => {
         const medicine = medicineMap.get(item.medicine_id);
-        if (medicine) {
-          await execute(
-            'INSERT INTO order_items (order_id, medicine_id, quantity, unit_price) VALUES (?, ?, ?, ?)',
-            [orderId, item.medicine_id, item.quantity, medicine.price]
-          );
+        return [orderId, item.medicine_id, item.quantity, medicine.price];
+      });
 
-          // Update stock quantity
-          await execute(
-            'UPDATE medicines SET stock_quantity = stock_quantity - ? WHERE id = ?',
-            [item.quantity, item.medicine_id]
-          );
-        }
-      }
+      await execute(
+        'INSERT INTO order_items (order_id, medicine_id, quantity, unit_price) VALUES ?',
+        [orderItemsValues]
+      );
+
+      // Update stock quantities in bulk
+      const stockUpdates = items.map(item => [
+        item.quantity,
+        item.medicine_id
+      ]);
+
+      const updateQuery = `
+        UPDATE medicines 
+        SET stock_quantity = CASE id
+          ${items.map((_, i) => `WHEN ? THEN stock_quantity - ?`).join(' ')}
+          ELSE stock_quantity
+        END
+        WHERE id IN (${items.map(() => '?').join(',')})
+      `;
+
+      const updateParams = items.flatMap(item => [item.medicine_id, item.quantity]);
+      await execute(updateQuery, [...updateParams, ...items.map(item => item.medicine_id)]);
 
       return { orderId, totalAmount };
     });
