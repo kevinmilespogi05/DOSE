@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { CLIENT_CONFIG } from '../config/client-config';
 
 const PAYMONGO_API_URL = 'https://api.paymongo.com/v1';
-const PAYMONGO_PUBLIC_KEY = import.meta.env.VITE_PAYMONGO_PUBLIC_KEY;
-const PAYMONGO_SECRET_KEY = import.meta.env.VITE_PAYMONGO_SECRET_KEY;
+const PAYMONGO_PUBLIC_KEY = CLIENT_CONFIG.PAYMONGO.PUBLIC_KEY;
+const PAYMONGO_SECRET_KEY = CLIENT_CONFIG.PAYMONGO.SECRET_KEY;
 
 interface PaymentMethodData {
   type: 'gcash' | 'grab_pay';
@@ -28,6 +29,10 @@ interface PaymentIntentData {
 
 export const createPaymentMethod = async (data: PaymentMethodData) => {
   try {
+    if (!PAYMONGO_PUBLIC_KEY) {
+      throw new Error('PayMongo public key is not configured');
+    }
+
     const response = await axios.post(
       `${PAYMONGO_API_URL}/payment_methods`,
       {
@@ -41,7 +46,7 @@ export const createPaymentMethod = async (data: PaymentMethodData) => {
       {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(PAYMONGO_PUBLIC_KEY || '')}`,
+          Authorization: `Basic ${btoa(PAYMONGO_PUBLIC_KEY)}`,
         },
       }
     );
@@ -54,6 +59,10 @@ export const createPaymentMethod = async (data: PaymentMethodData) => {
 
 export const createPaymentIntent = async (data: PaymentIntentData) => {
   try {
+    if (!PAYMONGO_SECRET_KEY) {
+      throw new Error('PayMongo secret key is not configured');
+    }
+
     const response = await axios.post(
       `${PAYMONGO_API_URL}/payment_intents`,
       {
@@ -72,7 +81,7 @@ export const createPaymentIntent = async (data: PaymentIntentData) => {
       {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(PAYMONGO_SECRET_KEY || '')}`,
+          Authorization: `Basic ${btoa(PAYMONGO_SECRET_KEY)}`,
         },
       }
     );
@@ -85,6 +94,14 @@ export const createPaymentIntent = async (data: PaymentIntentData) => {
 
 export const createSource = async (amount: number, type: 'gcash' | 'grab_pay') => {
   try {
+    if (!PAYMONGO_PUBLIC_KEY) {
+      throw new Error('PayMongo public key is not configured');
+    }
+
+    if (!CLIENT_CONFIG.PAYMONGO.FRONTEND_URL) {
+      throw new Error('Frontend URL is not configured');
+    }
+
     const response = await axios.post(
       `${PAYMONGO_API_URL}/sources`,
       {
@@ -94,8 +111,8 @@ export const createSource = async (amount: number, type: 'gcash' | 'grab_pay') =
             currency: 'PHP',
             type,
             redirect: {
-              success: `${window.location.origin}/payment/success`,
-              failed: `${window.location.origin}/payment/failed`,
+              success: `${CLIENT_CONFIG.PAYMONGO.FRONTEND_URL}/payment/success`,
+              failed: `${CLIENT_CONFIG.PAYMONGO.FRONTEND_URL}/payment/failed`,
             },
             billing: {
               name: 'Pharmacy Customer',
@@ -107,7 +124,7 @@ export const createSource = async (amount: number, type: 'gcash' | 'grab_pay') =
       {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(PAYMONGO_PUBLIC_KEY || '')}`,
+          Authorization: `Basic ${btoa(PAYMONGO_PUBLIC_KEY)}`,
         },
       }
     );
@@ -120,12 +137,16 @@ export const createSource = async (amount: number, type: 'gcash' | 'grab_pay') =
 
 export const verifyPayment = async (sourceId: string) => {
   try {
+    if (!PAYMONGO_SECRET_KEY) {
+      throw new Error('PayMongo secret key is not configured');
+    }
+
     const response = await axios.get(
       `${PAYMONGO_API_URL}/sources/${sourceId}`,
       {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(PAYMONGO_SECRET_KEY || '')}`,
+          Authorization: `Basic ${btoa(PAYMONGO_SECRET_KEY)}`,
         },
       }
     );

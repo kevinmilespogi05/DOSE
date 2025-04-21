@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
+// Configure axios defaults
+axios.defaults.baseURL = 'http://localhost:3000';
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+
 const PaymentSuccess = () => {
   const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState('');
@@ -19,17 +23,18 @@ const PaymentSuccess = () => {
           throw new Error('Missing payment information');
         }
 
+        if (!token) {
+          throw new Error('Not authenticated');
+        }
+
+        // Set the Authorization header
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
         // Verify payment with your backend
         await axios.post('/api/payments/verify', 
           {
             orderId,
             sourceId,
-          },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
           }
         );
 

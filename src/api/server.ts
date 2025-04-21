@@ -2,12 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { testConnection } from '../config/database';
+import { testConnection, pool } from '../config/database';
 import { query, execute, withTransaction, queryPaginated } from '../utils/db';
 import CONFIG from '../config/config';
 import { upload, processImage } from '../utils/imageUpload';
 import { RowDataPacket, Connection } from 'mysql2/promise';
 import path from 'path';
+import paymongoRoutes from './routes/paymongo';
+import { v4 as uuidv4 } from 'uuid';
 
 // Initialize admin user
 async function initializeAdmin() {
@@ -794,83 +796,101 @@ app.delete('/api/medicines/:id', authenticateToken, isAdmin, async (req: any, re
   }
 });
 
-// Orders endpoints
-app.post('/api/orders', authenticateToken, async (req: any, res) => {
-  const { items } = req.body;
-  const userId = req.user.userId;
-
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ message: 'Invalid items' });
-  }
-
+// Orders routes
+app.post('/api/orders', authenticateToken, async (req, res) => {
+  let connection;
   try {
-    const result = await withTransaction(async () => {
-      // Calculate total amount and verify stock in bulk
-      const medicineIds = items.map(item => item.medicine_id);
-      const placeholders = medicineIds.map(() => '?').join(',');
-      const medicines = await query(
-        `SELECT id, price, stock_quantity FROM medicines WHERE id IN (${placeholders})`,
-        medicineIds
+    console.log('Received order request:', req.body);
+    console.log('User ID:', req.user.userId);
+
+    connection = await pool.getConnection();
+    console.log('Database connection established');
+
+    const { items, total_amount } = req.body;
+    const user_id = req.user.userId;
+
+    // Validate required fields
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        error: 'Invalid items',
+        details: 'Items array is required and must not be empty'
+      });
+    }
+
+    if (!total_amount || isNaN(total_amount) || total_amount <= 0) {
+      return res.status(400).json({
+        error: 'Invalid total amount',
+        details: 'Total amount must be a positive number'
+      });
+    }
+
+    // Validate each item
+    for (const item of items) {
+      if (!item.medicine_id || !item.quantity || !item.price_per_unit) {
+        return res.status(400).json({
+          error: 'Invalid item data',
+          details: 'Each item must have medicine_id, quantity, and price_per_unit'
+        });
+      }
+    }
+
+    // Generate a unique order ID
+    const orderId = uuidv4();
+    console.log('Generated order ID:', orderId);
+
+    // Start transaction
+    await connection.beginTransaction();
+    console.log('Transaction started');
+
+    try {
+      // Insert order
+      const [orderResult] = await connection.execute(
+        'INSERT INTO orders (id, user_id, total_amount, status) VALUES (?, ?, ?, ?)',
+        [orderId, user_id, total_amount, 'pending_payment']
       );
+      console.log('Order inserted:', orderResult);
 
-      const medicineMap = new Map(medicines.map(m => [m.id, m]));
-      let totalAmount = 0;
-
-      // Verify all items have sufficient stock
+      // Insert order items
       for (const item of items) {
-        const medicine = medicineMap.get(item.medicine_id);
-        if (!medicine) {
-          throw new Error(`Medicine with ID ${item.medicine_id} not found`);
-        }
-        if (medicine.stock_quantity < item.quantity) {
-          throw new Error(`Insufficient stock for medicine ${item.medicine_id}`);
-        }
-        totalAmount += parseFloat(medicine.price) * item.quantity;
+        const [itemResult] = await connection.execute(
+          'INSERT INTO order_items (order_id, medicine_id, quantity, unit_price) VALUES (?, ?, ?, ?)',
+          [orderId, item.medicine_id, item.quantity, item.price_per_unit]
+        );
+        console.log('Order item inserted:', itemResult);
       }
 
-      // Create order
-      const orderId = Date.now().toString();
-      await execute(
-        'INSERT INTO orders (id, user_id, total_amount, status) VALUES (?, ?, ?, ?)',
-        [orderId, userId, totalAmount, 'pending_payment']
-      );
+      // Commit transaction
+      await connection.commit();
+      console.log('Transaction committed successfully');
 
-      // Create order items in bulk
-      const orderItemsValues = items.map(item => {
-        const medicine = medicineMap.get(item.medicine_id);
-        return [orderId, item.medicine_id, item.quantity, medicine.price];
+      res.status(201).json({
+        orderId,
+        message: 'Order created successfully'
       });
-
-      await execute(
-        'INSERT INTO order_items (order_id, medicine_id, quantity, unit_price) VALUES ?',
-        [orderItemsValues]
-      );
-
-      // Update stock quantities in bulk
-      const stockUpdates = items.map(item => [
-        item.quantity,
-        item.medicine_id
-      ]);
-
-      const updateQuery = `
-        UPDATE medicines 
-        SET stock_quantity = CASE id
-          ${items.map((_, i) => `WHEN ? THEN stock_quantity - ?`).join(' ')}
-          ELSE stock_quantity
-        END
-        WHERE id IN (${items.map(() => '?').join(',')})
-      `;
-
-      const updateParams = items.flatMap(item => [item.medicine_id, item.quantity]);
-      await execute(updateQuery, [...updateParams, ...items.map(item => item.medicine_id)]);
-
-      return { orderId, totalAmount };
-    });
-
-    res.status(201).json(result);
-  } catch (error: any) {
+    } catch (error) {
+      // Rollback transaction on error
+      await connection.rollback();
+      console.error('Error during transaction:', error);
+      throw error;
+    }
+  } catch (error) {
     console.error('Error creating order:', error);
-    res.status(500).json({ message: error.message || 'Error creating order' });
+    
+    res.status(500).json({
+      error: 'Failed to create order',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  } finally {
+    // Release connection back to pool
+    if (connection) {
+      try {
+        await connection.release();
+        console.log('Connection released back to pool');
+      } catch (releaseError) {
+        console.error('Error releasing connection:', releaseError);
+      }
+    }
   }
 });
 
@@ -1051,6 +1071,50 @@ app.post('/api/admin/payments/:id/validate', authenticateToken, isAdmin, async (
   } catch (error) {
     console.error('Error validating payment:', error);
     res.status(500).json({ message: 'Error validating payment' });
+  }
+});
+
+// PayMongo routes
+app.use('/api/payments', paymongoRoutes);
+
+// Order history endpoint
+app.get('/api/orders/history', authenticateToken, async (req: any, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    // First get the orders
+    const orders = await query(
+      `SELECT o.id, o.total_amount, o.status, o.created_at, o.updated_at
+       FROM orders o
+       WHERE o.user_id = ?
+       ORDER BY o.created_at DESC`,
+      [userId]
+    );
+
+    // Then get the order items for each order
+    const processedOrders = await Promise.all(orders.map(async (order) => {
+      const items = await query(
+        `SELECT oi.medicine_id, oi.quantity, oi.unit_price, m.name as medicine_name
+         FROM order_items oi
+         JOIN medicines m ON oi.medicine_id = m.id
+         WHERE oi.order_id = ?`,
+        [order.id]
+      );
+
+      return {
+        ...order,
+        total_amount: Number(order.total_amount),
+        items: items.map(item => ({
+          ...item,
+          unit_price: Number(item.unit_price)
+        }))
+      };
+    }));
+
+    res.json(processedOrders);
+  } catch (error) {
+    console.error('Error fetching order history:', error);
+    res.status(500).json({ message: 'Error fetching order history' });
   }
 });
 

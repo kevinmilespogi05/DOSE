@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import Payment from '../payment/Payment';
+import PaymongoCheckout from '../payment/PaymongoCheckout';
 import { formatPeso } from '../../utils/currency';
 
 interface CartItem {
@@ -89,24 +89,95 @@ const Cart = () => {
 
   const handleCheckout = async () => {
     try {
+      // Validate cart is not empty
+      if (cartItems.length === 0) {
+        setError('Your cart is empty');
+        return;
+      }
+
+      // Validate user is logged in
+      if (!user) {
+        setError('Please log in to complete your purchase');
+        return;
+      }
+
+      // Validate all items have valid quantities
+      const invalidItems = cartItems.filter(item => item.quantity < 1);
+      if (invalidItems.length > 0) {
+        setError('Some items have invalid quantities');
+        return;
+      }
+
+      // Validate Paymongo configuration
+      if (!import.meta.env.VITE_PAYMONGO_PUBLIC_KEY || !import.meta.env.VITE_PAYMONGO_SECRET_KEY) {
+        console.error('Paymongo configuration missing');
+        setError('Payment system is not properly configured. Please contact support.');
+        return;
+      }
+
+      // Transform cart items to match backend expectations
+      const orderItems = cartItems.map(item => ({
+        medicine_id: item.medicine_id,
+        quantity: item.quantity,
+        price_per_unit: typeof item.price === 'string' ? parseFloat(item.price) : item.price
+      }));
+
+      const totalAmount = calculateTotal();
+
+      // Create order with additional metadata
+      const orderData = {
+        items: orderItems,
+        total_amount: totalAmount,
+        user_id: user.id
+      };
+
+      console.log('Creating order with data:', orderData);
+
       const response = await axios.post('/api/orders', 
-        { items: cartItems },
+        orderData,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
           }
         }
       );
-      setOrderId(response.data.orderId);
-      setShowPayment(true);
+      
+      if (response.data.orderId) {
+        console.log('Order created successfully:', response.data.orderId);
+        setOrderId(response.data.orderId);
+        setShowPayment(true);
+        setError(null); // Clear any previous errors
+      } else {
+        throw new Error('Failed to create order: No order ID received');
+      }
     } catch (err) {
-      setError('Failed to create order');
+      console.error('Checkout error:', err);
+      let errorMessage = 'Failed to process your order. Please try again.';
+      
+      if (err.response) {
+        // Handle specific error cases
+        if (err.response.status === 401) {
+          errorMessage = 'Your session has expired. Please log in again.';
+        } else if (err.response.status === 400) {
+          errorMessage = err.response.data.message || 'Invalid order data. Please check your cart.';
+        } else if (err.response.status === 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+        
+        console.error('Server response:', err.response.data);
+      }
+      
+      setError(errorMessage);
     }
   };
 
   const handleClosePayment = () => {
     setShowPayment(false);
     setOrderId(null);
+    // Refresh cart items after successful payment
+    fetchCartItems();
+    updateCartCount();
   };
 
   if (loading) return (
@@ -203,9 +274,9 @@ const Cart = () => {
       )}
 
       {showPayment && orderId && (
-        <Payment
+        <PaymongoCheckout
           orderId={orderId}
-          totalAmount={calculateTotal()}
+          amount={calculateTotal()}
           onClose={handleClosePayment}
         />
       )}

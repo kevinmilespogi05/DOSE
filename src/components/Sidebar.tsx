@@ -12,14 +12,15 @@ import {
   Receipt,
   History,
   Menu,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
   const location = useLocation();
-  const { isAdmin } = useAuth();
+  const { isAdmin, logout } = useAuth();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   
   const adminMenuItems = [
@@ -122,6 +123,18 @@ const Sidebar = () => {
                 </Link>
               );
             })}
+            
+            {/* Logout Button */}
+            <button
+              onClick={() => {
+                setIsMobileOpen(false);
+                logout();
+              }}
+              className="w-full flex items-center px-4 py-3 rounded-md text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200 group"
+            >
+              <LogOut className="w-5 h-5 mr-3 text-gray-500 group-hover:text-red-600 transition-colors duration-200" />
+              <span className="font-medium">Logout</span>
+            </button>
           </div>
         </nav>
       </aside>

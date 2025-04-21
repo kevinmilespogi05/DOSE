@@ -19,6 +19,7 @@ import { CartProvider } from './context/CartContext';
 import PaymentValidation from './components/admin/PaymentValidation';
 import PaymentSuccess from './pages/payment/PaymentSuccess';
 import PaymentFailed from './pages/payment/PaymentFailed';
+import OrderHistory from './components/shop/OrderHistory';
 
 // Route guard for authenticated users
 const PrivateRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => {
@@ -78,6 +79,7 @@ function AppContent() {
               <Route path="/shop" element={<UserRoute element={<Shop />} />} />
               <Route path="/shop/medicine/:id" element={<UserRoute element={<ProductDetails />} />} />
               <Route path="/cart" element={<UserRoute element={<Cart />} />} />
+              <Route path="/order-history" element={<UserRoute element={<OrderHistory />} />} />
               
               {/* Shared Protected Routes */}
               <Route path="/profile" element={<PrivateRoute element={<Profile />} />} />

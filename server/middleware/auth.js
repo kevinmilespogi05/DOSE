@@ -8,11 +8,18 @@ export const authenticateToken = (req, res, next) => {
     return res.status(401).json({ message: 'Authentication required' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
       return res.status(403).json({ message: 'Invalid or expired token' });
     }
-    req.user = user;
+    
+    // Set the user object with the decoded token data
+    req.user = {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role
+    };
+    
     next();
   });
 };
