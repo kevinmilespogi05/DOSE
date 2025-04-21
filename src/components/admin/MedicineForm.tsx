@@ -31,7 +31,9 @@ const MedicineForm: React.FC<MedicineFormProps> = ({ onSubmit, initialData }) =>
     requires_prescription: false,
     min_stock_level: 10,
     max_stock_level: 100,
-    expiry_date: ''
+    expiry_date: '',
+    box_quantity: '',
+    price_per_box: ''
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -232,6 +234,34 @@ const MedicineForm: React.FC<MedicineFormProps> = ({ onSubmit, initialData }) =>
                 step="0.01"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                className="mt-1 block w-full pl-7 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Box Quantity</label>
+            <input
+              type="number"
+              value={formData.box_quantity}
+              onChange={(e) => setFormData({ ...formData, box_quantity: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Price per Box</label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span className="text-gray-500 sm:text-sm">₱</span>
+              </div>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.price_per_box}
+                onChange={(e) => setFormData({ ...formData, price_per_box: e.target.value })}
                 className="mt-1 block w-full pl-7 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                 required
               />

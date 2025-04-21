@@ -129,30 +129,32 @@ CREATE TABLE `medicines` (
   `min_stock_level` int(11) DEFAULT 10,
   `max_stock_level` int(11) DEFAULT 100,
   `category_id` int(11) DEFAULT NULL,
-  `image_url` varchar(255) DEFAULT 'https://via.placeholder.com/400x300?text=Medicine+Image'
+  `image_url` varchar(255) DEFAULT 'https://via.placeholder.com/400x300?text=Medicine+Image',
+  `box_quantity` int(11) NOT NULL DEFAULT 1,
+  `price_per_box` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `medicines`
 --
 
-INSERT INTO `medicines` (`id`, `name`, `generic_name`, `brand`, `category`, `description`, `price`, `stock_quantity`, `unit`, `expiry_date`, `created_at`, `updated_at`, `supplier_id`, `requires_prescription`, `min_stock_level`, `max_stock_level`, `category_id`, `image_url`) VALUES
-(16, 'Cetirizine', 'Cetirizine', 'AllerCare', NULL, NULL, 10.00, 30, 'tablets', '2027-11-15', '2025-03-18 02:51:17', '2025-03-18 03:02:56', 1, 1, 10, 100, 4, '/images/medicines/medicine-1742266313085.png'),
-(17, 'Omeprazole', 'Omeprazole', 'Omezol', NULL, NULL, 15.00, 50, 'tablets', '2026-12-12', '2025-03-18 03:04:09', '2025-03-18 03:05:16', 3, 0, 10, 100, 3, '/images/medicines/medicine-1742267049716.png'),
-(18, 'Amoxicillin', 'Amoxicillin', 'AmoCare', NULL, NULL, 25.00, 75, 'capsules', '2025-09-05', '2025-03-18 03:05:57', '2025-03-18 03:05:57', 2, 0, 10, 100, 1, '/images/medicines/medicine-1742267157362.png'),
-(19, 'Losartan', 'Losartan Potassium', 'CardioSafe', NULL, NULL, 20.00, 40, 'tablets', '2027-11-15', '2025-03-18 03:06:41', '2025-03-18 03:07:22', 3, 0, 10, 100, 6, '/images/medicines/medicine-1742267241910.png'),
-(20, 'Paracetamol', 'Paracetamol', 'PainAway', NULL, NULL, 5.00, 90, 'tablets', '2026-03-22', '2025-03-18 03:08:22', '2025-03-18 03:08:22', 2, 0, 10, 100, 2, '/images/medicines/medicine-1742267302037.png'),
-(21, 'Ascorbic Acid', 'Vitamin C', 'VitaBoost', NULL, NULL, 12.00, 60, 'tablets', '2027-10-30', '2025-03-18 03:09:06', '2025-03-18 03:09:06', 1, 0, 10, 100, 5, '/images/medicines/medicine-1742267346487.png'),
-(22, 'Multivitamins', 'Multivitamins', 'VitaComplete', NULL, NULL, 20.00, 75, 'tablets', '2027-03-14', '2025-03-18 03:17:25', '2025-03-18 03:17:25', 3, 0, 10, 100, 5, '/images/medicines/medicine-1742267845660.png'),
-(23, 'Ferrous Sulfate', 'Iron Supplement', 'FerroStrong', NULL, NULL, 18.00, 45, 'capsules', '2026-12-28', '2025-03-18 03:18:02', '2025-03-18 03:18:02', 2, 0, 10, 100, 5, '/images/medicines/medicine-1742267882304.png'),
-(24, 'Mefenamic Acid', 'Mefenamic Acid', 'Mefenax', NULL, NULL, 12.00, 80, 'capsules', '2025-07-05', '2025-03-18 03:18:52', '2025-03-18 03:18:52', 1, 0, 10, 100, 2, '/images/medicines/medicine-1742267932238.png'),
-(25, 'Ibuprofen', 'Ibuprofen', 'IbuRelief', NULL, NULL, 8.00, 70, 'tablets', '2026-10-11', '2025-03-18 03:19:52', '2025-03-18 03:19:52', 3, 0, 10, 100, 2, '/images/medicines/medicine-1742267991905.png'),
-(26, 'Metoprolol', 'Metoprolol', 'BetaCare', NULL, NULL, 18.00, 48, 'tablets', '2027-09-22', '2025-03-18 03:20:44', '2025-03-18 03:20:44', 1, 0, 10, 100, 6, '/images/medicines/medicine-1742268044871.png'),
-(27, 'Amlodipine', 'Amlodipine', 'CardioTone', NULL, NULL, 22.00, 50, 'tablets', '2026-05-10', '2025-03-18 03:21:23', '2025-03-18 03:21:23', 2, 0, 10, 100, 6, '/images/medicines/medicine-1742268082971.png'),
-(28, 'Loratadine', 'Loratadine', 'LoraFast', NULL, NULL, 12.00, 35, 'tablets', '2026-11-15', '2025-03-18 03:22:18', '2025-03-18 03:22:18', 3, 0, 10, 100, 4, '/images/medicines/medicine-1742268137814.png'),
-(29, 'Cefalexin', 'Cefalexin', 'CefaPlus', NULL, NULL, 28.00, 55, 'capsules', '2026-04-02', '2025-03-18 03:23:07', '2025-03-18 03:23:07', 2, 0, 10, 100, 1, '/images/medicines/medicine-1742268186917.png'),
-(30, 'Azithromycin', 'Azithromycin', 'AzitroMed', NULL, NULL, 30.00, 60, 'tablets', '2027-06-18', '2025-03-18 03:24:01', '2025-03-18 03:24:01', 3, 0, 10, 100, 1, '/images/medicines/medicine-1742268241000.png'),
-(31, 'Ranitidine', 'Ranitidine', 'RaniRelief', NULL, NULL, 18.00, 45, 'tablets', '2025-08-20', '2025-03-18 03:24:58', '2025-03-18 03:24:58', 1, 0, 10, 100, 3, '/images/medicines/medicine-1742268298639.png');
+INSERT INTO `medicines` (`id`, `name`, `generic_name`, `brand`, `category`, `description`, `price`, `stock_quantity`, `unit`, `expiry_date`, `created_at`, `updated_at`, `supplier_id`, `requires_prescription`, `min_stock_level`, `max_stock_level`, `category_id`, `image_url`, `box_quantity`, `price_per_box`) VALUES
+(16, 'Cetirizine', 'Cetirizine', 'AllerCare', NULL, NULL, 10.00, 30, 'tablets', '2027-11-15', '2025-03-18 02:51:17', '2025-03-18 03:02:56', 1, 1, 10, 100, 4, '/images/medicines/medicine-1742266313085.png', 1, 10.00),
+(17, 'Omeprazole', 'Omeprazole', 'Omezol', NULL, NULL, 15.00, 50, 'tablets', '2026-12-12', '2025-03-18 03:04:09', '2025-03-18 03:05:16', 3, 0, 10, 100, 3, '/images/medicines/medicine-1742267049716.png', 1, 15.00),
+(18, 'Amoxicillin', 'Amoxicillin', 'AmoCare', NULL, NULL, 25.00, 75, 'capsules', '2025-09-05', '2025-03-18 03:05:57', '2025-03-18 03:05:57', 2, 0, 10, 100, 1, '/images/medicines/medicine-1742267157362.png', 1, 25.00),
+(19, 'Losartan', 'Losartan Potassium', 'CardioSafe', NULL, NULL, 20.00, 40, 'tablets', '2027-11-15', '2025-03-18 03:06:41', '2025-03-18 03:07:22', 3, 0, 10, 100, 6, '/images/medicines/medicine-1742267241910.png', 1, 20.00),
+(20, 'Paracetamol', 'Paracetamol', 'PainAway', NULL, NULL, 5.00, 90, 'tablets', '2026-03-22', '2025-03-18 03:08:22', '2025-03-18 03:08:22', 2, 0, 10, 100, 2, '/images/medicines/medicine-1742267302037.png', 1, 5.00),
+(21, 'Ascorbic Acid', 'Vitamin C', 'VitaBoost', NULL, NULL, 12.00, 60, 'tablets', '2027-10-30', '2025-03-18 03:09:06', '2025-03-18 03:09:06', 1, 0, 10, 100, 5, '/images/medicines/medicine-1742267346487.png', 1, 12.00),
+(22, 'Multivitamins', 'Multivitamins', 'VitaComplete', NULL, NULL, 20.00, 75, 'tablets', '2027-03-14', '2025-03-18 03:17:25', '2025-03-18 03:17:25', 3, 0, 10, 100, 5, '/images/medicines/medicine-1742267845660.png', 1, 20.00),
+(23, 'Ferrous Sulfate', 'Iron Supplement', 'FerroStrong', NULL, NULL, 18.00, 45, 'capsules', '2026-12-28', '2025-03-18 03:18:02', '2025-03-18 03:18:02', 2, 0, 10, 100, 5, '/images/medicines/medicine-1742267882304.png', 1, 18.00),
+(24, 'Mefenamic Acid', 'Mefenamic Acid', 'Mefenax', NULL, NULL, 12.00, 80, 'capsules', '2025-07-05', '2025-03-18 03:18:52', '2025-03-18 03:18:52', 1, 0, 10, 100, 2, '/images/medicines/medicine-1742267932238.png', 1, 12.00),
+(25, 'Ibuprofen', 'Ibuprofen', 'IbuRelief', NULL, NULL, 8.00, 70, 'tablets', '2026-10-11', '2025-03-18 03:19:52', '2025-03-18 03:19:52', 3, 0, 10, 100, 2, '/images/medicines/medicine-1742267991905.png', 1, 8.00),
+(26, 'Metoprolol', 'Metoprolol', 'BetaCare', NULL, NULL, 18.00, 48, 'tablets', '2027-09-22', '2025-03-18 03:20:44', '2025-03-18 03:20:44', 1, 0, 10, 100, 6, '/images/medicines/medicine-1742268044871.png', 1, 18.00),
+(27, 'Amlodipine', 'Amlodipine', 'CardioTone', NULL, NULL, 22.00, 50, 'tablets', '2026-05-10', '2025-03-18 03:21:23', '2025-03-18 03:21:23', 2, 0, 10, 100, 6, '/images/medicines/medicine-1742268082971.png', 1, 22.00),
+(28, 'Loratadine', 'Loratadine', 'LoraFast', NULL, NULL, 12.00, 35, 'tablets', '2026-11-15', '2025-03-18 03:22:18', '2025-03-18 03:22:18', 3, 0, 10, 100, 4, '/images/medicines/medicine-1742268137814.png', 1, 12.00),
+(29, 'Cefalexin', 'Cefalexin', 'CefaPlus', NULL, NULL, 28.00, 55, 'capsules', '2026-04-02', '2025-03-18 03:23:07', '2025-03-18 03:23:07', 2, 0, 10, 100, 1, '/images/medicines/medicine-1742268186917.png', 1, 28.00),
+(30, 'Azithromycin', 'Azithromycin', 'AzitroMed', NULL, NULL, 30.00, 60, 'tablets', '2027-06-18', '2025-03-18 03:24:01', '2025-03-18 03:24:01', 3, 0, 10, 100, 1, '/images/medicines/medicine-1742268241000.png', 1, 30.00),
+(31, 'Ranitidine', 'Ranitidine', 'RaniRelief', NULL, NULL, 18.00, 45, 'tablets', '2025-08-20', '2025-03-18 03:24:58', '2025-03-18 03:24:58', 1, 0, 10, 100, 3, '/images/medicines/medicine-1742268298639.png', 1, 18.00);
 
 -- --------------------------------------------------------
 

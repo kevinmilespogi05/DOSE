@@ -36,7 +36,6 @@ const Sidebar = () => {
 
   const userMenuItems = [
     { icon: ShoppingCart, label: 'Shop', path: '/shop' },
-    { icon: Receipt, label: 'My Orders', path: '/orders' },
     { icon: History, label: 'Order History', path: '/order-history' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];

@@ -21,6 +21,8 @@ interface Medicine {
   supplier_name: string;
   requires_prescription: boolean;
   image_url: string;
+  box_quantity: number;
+  price_per_box: string | number;
 }
 
 const ProductDetails = () => {

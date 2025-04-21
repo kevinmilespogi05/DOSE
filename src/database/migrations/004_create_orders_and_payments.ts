@@ -24,6 +24,8 @@ export async function up() {
       medicine_id int(11) NOT NULL,
       quantity int(11) NOT NULL,
       unit_price decimal(10,2) NOT NULL,
+      is_box boolean NOT NULL DEFAULT false,
+      box_quantity int(11) DEFAULT NULL,
       created_at timestamp NOT NULL DEFAULT current_timestamp(),
       PRIMARY KEY (id),
       KEY order_id (order_id),
