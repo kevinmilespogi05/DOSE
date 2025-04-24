@@ -91,7 +91,7 @@ router.post('/create-source', authenticateToken, async (req, res) => {
 
 // Verify payment status
 router.post('/verify', authenticateToken, async (req, res) => {
-  const { sourceId } = req.body;
+  const { sourceId, orderId } = req.body;
   const userId = req.user.userId;
 
   try {
@@ -100,8 +100,8 @@ router.post('/verify', authenticateToken, async (req, res) => {
       `SELECT p.*, o.user_id 
        FROM payments p
        JOIN orders o ON p.order_id = o.id
-       WHERE p.source_id = ?`,
-      [sourceId]
+       WHERE p.source_id = ?${orderId ? ' AND p.order_id = ?' : ''}`,
+      orderId ? [sourceId, orderId] : [sourceId]
     );
 
     if (payments.length === 0) {

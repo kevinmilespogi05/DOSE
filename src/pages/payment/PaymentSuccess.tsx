@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Loader2 } from 'lucide-react';
-import axios from 'axios';
-
-// Configure axios defaults
-axios.defaults.baseURL = 'http://localhost:3000';
-axios.defaults.headers.common['Content-Type'] = 'application/json';
+import api from '../../lib/api';
 
 const PaymentSuccess = () => {
   const [isProcessing, setIsProcessing] = useState(true);
@@ -17,26 +13,16 @@ const PaymentSuccess = () => {
       try {
         const orderId = localStorage.getItem('pendingOrderId');
         const sourceId = localStorage.getItem('pendingSourceId');
-        const token = localStorage.getItem('token');
 
         if (!orderId || !sourceId) {
           throw new Error('Missing payment information');
         }
 
-        if (!token) {
-          throw new Error('Not authenticated');
-        }
-
-        // Set the Authorization header
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-        // Verify payment with your backend
-        await axios.post('/api/payments/verify', 
-          {
-            orderId,
-            sourceId,
-          }
-        );
+        // Verify payment with backend
+        await api.post('/payments/verify', {
+          orderId,
+          sourceId
+        });
 
         // Clear pending payment data
         localStorage.removeItem('pendingOrderId');

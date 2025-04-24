@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { User, AuthResponse, LoginCredentials, RegisterData } from '../types';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import api from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -27,7 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (token) {
         try {
           // Verify token by fetching user profile
-          const response = await axios.get('/api/user/profile', {
+          const response = await api.get('/user/profile', {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -71,12 +71,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (credentials: LoginCredentials) => {
     try {
-      const response = await axios.post<AuthResponse>('/api/auth/login', credentials);
+      const response = await api.post<AuthResponse>('/auth/login', credentials);
       const { token, user } = response.data;
       
       // Set token and update axios defaults
       localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       // Update state sequentially
       setUser(user);
@@ -98,12 +98,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (data: RegisterData) => {
     try {
-      const response = await axios.post<AuthResponse>('/api/auth/register', data);
+      const response = await api.post<AuthResponse>('/auth/register', data);
       const { token, user } = response.data;
       
       // Set token and update axios defaults
       localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       // Update state sequentially
       setUser(user);

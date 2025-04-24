@@ -216,4 +216,89 @@ router.get('/history', async (req, res) => {
   }
 });
 
+// Get all orders (admin only)
+router.get('/admin/orders', async (req, res) => {
+  let connection;
+  try {
+    // Check if user is authenticated and is admin
+    if (!req.user || !req.user.id || !req.user.is_admin) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        details: 'Admin access required'
+      });
+    }
+
+    connection = await pool.getConnection();
+
+    // Get all orders with their items and user information
+    const [orders] = await connection.execute(`
+      SELECT 
+        o.id,
+        o.user_id,
+        o.total_amount,
+        o.status,
+        o.created_at,
+        o.updated_at,
+        u.name as user_name,
+        u.email as user_email,
+        oi.medicine_id,
+        oi.quantity,
+        oi.unit_price,
+        m.name as medicine_name
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN medicines m ON oi.medicine_id = m.id
+      ORDER BY o.created_at DESC
+    `);
+
+    // Group orders and their items
+    const groupedOrders = orders.reduce((acc, row) => {
+      if (!acc[row.id]) {
+        acc[row.id] = {
+          id: row.id,
+          user_id: row.user_id,
+          total_amount: row.total_amount,
+          status: row.status,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+          user: {
+            id: row.user_id,
+            name: row.user_name,
+            email: row.user_email
+          },
+          items: []
+        };
+      }
+      
+      if (row.medicine_id) {
+        acc[row.id].items.push({
+          medicine_id: row.medicine_id,
+          quantity: row.quantity,
+          unit_price: row.unit_price,
+          medicine_name: row.medicine_name
+        });
+      }
+      
+      return acc;
+    }, {});
+
+    res.json(Object.values(groupedOrders));
+  } catch (error) {
+    console.error('Error fetching admin orders:', error);
+    res.status(500).json({
+      error: 'Failed to fetch orders',
+      details: error.message
+    });
+  } finally {
+    if (connection) {
+      try {
+        await connection.release();
+      } catch (releaseError) {
+        console.error('Error releasing connection:', releaseError);
+      }
+    }
+  }
+});
+
 export default router; 

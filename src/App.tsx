@@ -20,6 +20,10 @@ import PaymentValidation from './components/admin/PaymentValidation';
 import PaymentSuccess from './pages/payment/PaymentSuccess';
 import PaymentFailed from './pages/payment/PaymentFailed';
 import OrderHistory from './components/shop/OrderHistory';
+import Prescriptions from './components/shop/Prescriptions';
+import PrescriptionManagement from './components/admin/PrescriptionManagement';
+import Orders from './components/admin/Orders';
+import Reports from './components/admin/Reports';
 
 // Route guard for authenticated users
 const PrivateRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => {
@@ -73,13 +77,16 @@ function AppContent() {
               <Route path="/admin" element={<AdminRoute element={<AdminDashboard />} />} />
               <Route path="/admin/medicines" element={<AdminRoute element={<MedicineList />} />} />
               <Route path="/admin/users" element={<AdminRoute element={<Users />} />} />
-              <Route path="/admin/payments" element={<AdminRoute element={<PaymentValidation />} />} />
+              <Route path="/admin/prescriptions" element={<AdminRoute element={<PrescriptionManagement />} />} />
+              <Route path="/admin/orders" element={<AdminRoute element={<Orders />} />} />
+              <Route path="/admin/reports" element={<AdminRoute element={<Reports />} />} />
               
               {/* User Routes */}
               <Route path="/shop" element={<UserRoute element={<Shop />} />} />
               <Route path="/shop/medicine/:id" element={<UserRoute element={<ProductDetails />} />} />
               <Route path="/cart" element={<UserRoute element={<Cart />} />} />
               <Route path="/order-history" element={<UserRoute element={<OrderHistory />} />} />
+              <Route path="/prescriptions" element={<UserRoute element={<Prescriptions />} />} />
               
               {/* Shared Protected Routes */}
               <Route path="/profile" element={<PrivateRoute element={<Profile />} />} />

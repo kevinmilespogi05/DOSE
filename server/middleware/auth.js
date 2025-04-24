@@ -17,7 +17,7 @@ export const authenticateToken = (req, res, next) => {
     req.user = {
       id: decoded.id,
       email: decoded.email,
-      role: decoded.role
+      is_admin: decoded.is_admin
     };
     
     next();

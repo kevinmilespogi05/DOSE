@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Star, ArrowLeft, ShoppingCart, Heart, Share2, AlertTriangle, Check } from 'lucide-react';
+import { Star, ArrowLeft, ShoppingCart, Heart, Share2, AlertTriangle, Check, FileText } from 'lucide-react';
 import axios from 'axios';
 import { useCart } from '../../context/CartContext';
 import { formatPeso } from '../../utils/currency';
@@ -248,6 +248,25 @@ const ProductDetails = () => {
               </div>
             </div>
           </div>
+
+          {medicine.requires_prescription && (
+            <div className="mt-4 p-4 border border-red-300 bg-red-50 rounded-md">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <FileText className="h-5 w-5 text-red-500" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">Prescription Required</h3>
+                  <div className="mt-1 text-sm text-red-700">
+                    <p>This medicine requires a valid prescription from a licensed healthcare provider.</p>
+                    <Link to="/prescriptions" className="mt-2 inline-block text-red-700 font-medium underline">
+                      Upload your prescription here
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

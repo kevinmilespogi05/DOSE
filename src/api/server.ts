@@ -9,27 +9,44 @@ import { upload, processImage } from '../utils/imageUpload';
 import { RowDataPacket, Connection } from 'mysql2/promise';
 import path from 'path';
 import paymongoRoutes from './routes/paymongo';
+import prescriptionRoutes from './routes/prescriptions';
 import { v4 as uuidv4 } from 'uuid';
 
 // Initialize admin user
 async function initializeAdmin() {
   try {
-    const adminEmail = 'admin@example.com';
+    const adminEmail = 'admin@gmail.com';
     const adminPassword = 'admin123'; // Change this in production
 
-    // Check if admin exists
+    // Check if admin with this email exists
     const existingAdmin = await query(
       'SELECT id FROM users WHERE email = ?',
       [adminEmail]
     );
+    
+    // Check if admin with default username exists but with different email
+    const adminByUsername = await query(
+      'SELECT id, email FROM users WHERE username = ?',
+      ['admin']
+    );
 
     if (existingAdmin.length === 0) {
-      const hashedPassword = await bcrypt.hash(adminPassword, 10);
-      await execute(
-        'INSERT INTO users (email, username, password_hash, role) VALUES (?, ?, ?, ?)',
-        [adminEmail, 'admin', hashedPassword, 'admin']
-      );
-      console.log('Admin user created successfully');
+      if (adminByUsername.length > 0) {
+        // Admin username exists but with different email, update the email
+        await execute(
+          'UPDATE users SET email = ? WHERE username = ?',
+          [adminEmail, 'admin']
+        );
+        console.log('Admin email updated successfully');
+      } else {
+        // No admin exists, create a new one
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
+        await execute(
+          'INSERT INTO users (email, username, password_hash, role) VALUES (?, ?, ?, ?)',
+          [adminEmail, 'admin', hashedPassword, 'admin']
+        );
+        console.log('Admin user created successfully');
+      }
     } else {
       console.log('Admin user already exists');
     }
@@ -41,8 +58,10 @@ async function initializeAdmin() {
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5174', 'http://127.0.0.1:5174'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
@@ -218,6 +237,78 @@ app.delete('/api/admin/users/:id', authenticateToken, isAdmin, async (req, res) 
   } catch (error) {
     console.error('Error deleting user:', error);
     res.status(500).json({ message: 'Error deleting user' });
+  }
+});
+
+// Admin Orders routes
+app.get('/api/admin/orders', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const orders = await query(`
+      SELECT 
+        o.id,
+        o.user_id,
+        o.total_amount,
+        o.status,
+        o.created_at,
+        o.updated_at,
+        u.email as user_email,
+        u.username as user_name
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      ORDER BY o.created_at DESC
+    `);
+
+    // Get order items for each order
+    const ordersWithItems = await Promise.all(orders.map(async (order) => {
+      const items = await query(`
+        SELECT 
+          oi.medicine_id,
+          oi.quantity,
+          oi.unit_price,
+          m.name as medicine_name
+        FROM order_items oi
+        LEFT JOIN medicines m ON oi.medicine_id = m.id
+        WHERE oi.order_id = ?
+      `, [order.id]);
+
+      return {
+        ...order,
+        items,
+        user: {
+          id: order.user_id,
+          name: order.user_name,
+          email: order.user_email
+        }
+      };
+    }));
+
+    res.json(ordersWithItems);
+  } catch (error) {
+    console.error('Error fetching admin orders:', error);
+    res.status(500).json({ message: 'Error fetching orders' });
+  }
+});
+
+// Update order status (admin)
+app.put('/api/admin/orders/:orderId/status', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+    
+    // Update the order status
+    const result = await execute(
+      'UPDATE orders SET status = ? WHERE id = ?',
+      [status, orderId]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    res.json({ message: 'Order status updated successfully' });
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    res.status(500).json({ message: 'Error updating order status' });
   }
 });
 
@@ -1118,12 +1209,275 @@ app.get('/api/orders/history', authenticateToken, async (req: any, res) => {
   }
 });
 
+// Reports endpoints
+app.get('/api/admin/reports/sales', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    // Get daily sales for the last 7 days
+    const dailySales = await query(`
+      SELECT 
+        DATE_FORMAT(created_at, '%Y-%m-%d') as period,
+        SUM(total_amount) as total
+      FROM orders
+      WHERE status = 'completed'
+      AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+      GROUP BY period
+      ORDER BY period DESC
+      LIMIT 7
+    `);
+
+    // Get monthly sales for the last 6 months
+    const monthlySales = await query(`
+      SELECT 
+        DATE_FORMAT(created_at, '%Y-%m') as period,
+        SUM(total_amount) as total
+      FROM orders
+      WHERE status = 'completed'
+      AND created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+      GROUP BY period
+      ORDER BY period DESC
+      LIMIT 6
+    `);
+
+    // Get order count
+    const [orderCount] = await query(`
+      SELECT COUNT(*) as count
+      FROM orders
+      WHERE status = 'completed'
+    `);
+
+    // Get total revenue
+    const [totalRevenue] = await query(`
+      SELECT SUM(total_amount) as total
+      FROM orders
+      WHERE status = 'completed'
+      AND created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    `);
+
+    // Get average order value
+    const [avgOrderValue] = await query(`
+      SELECT AVG(total_amount) as average
+      FROM orders
+      WHERE status = 'completed'
+    `);
+
+    // Format daily sales with readable period names
+    const formattedDailySales = dailySales.map((day) => {
+      const date = new Date(day.period);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const diffDays = Math.round((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      
+      let periodName;
+      if (diffDays === 0) {
+        periodName = 'Today';
+      } else if (diffDays === 1) {
+        periodName = 'Yesterday';
+      } else {
+        periodName = `${diffDays} days ago`;
+      }
+      
+      return {
+        period: periodName,
+        total: Number(day.total) || 0
+      };
+    });
+
+    // Format monthly sales with readable period names
+    const formattedMonthlySales = monthlySales.map((month) => {
+      const [year, monthNum] = month.period.split('-');
+      const date = new Date(parseInt(year), parseInt(monthNum) - 1);
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+        'July', 'August', 'September', 'October', 'November', 'December'];
+      
+      return {
+        period: `${monthNames[date.getMonth()]} ${date.getFullYear()}`,
+        total: Number(month.total) || 0
+      };
+    });
+
+    res.json({
+      dailySales: formattedDailySales,
+      monthlySales: formattedMonthlySales,
+      summary: {
+        orderCount: orderCount.count || 0,
+        monthlyRevenue: Number(totalRevenue.total) || 0,
+        averageOrderValue: Number(avgOrderValue.average) || 0
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching sales reports:', error);
+    res.status(500).json({ message: 'Error fetching sales reports' });
+  }
+});
+
+// Admin dashboard data
+app.get('/api/admin/dashboard', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    // Total sales
+    const [totalSales] = await query(`
+      SELECT SUM(total_amount) as value
+      FROM orders
+      WHERE status = 'completed'
+    `);
+
+    // Get percentage change in revenue compared to previous month
+    const [currentMonthSales] = await query(`
+      SELECT COALESCE(SUM(total_amount), 0) as value
+      FROM orders
+      WHERE status = 'completed'
+      AND created_at >= DATE_FORMAT(NOW() ,'%Y-%m-01')
+    `);
+
+    const [previousMonthSales] = await query(`
+      SELECT COALESCE(SUM(total_amount), 0) as value
+      FROM orders
+      WHERE status = 'completed'
+      AND created_at >= DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH) ,'%Y-%m-01')
+      AND created_at < DATE_FORMAT(NOW() ,'%Y-%m-01')
+    `);
+
+    let revenueChange = 0;
+    if (previousMonthSales.value > 0) {
+      revenueChange = ((currentMonthSales.value - previousMonthSales.value) / previousMonthSales.value) * 100;
+    }
+
+    // Low stock items
+    const lowStockItems = await query(`
+      SELECT COUNT(*) as count, 
+             SUM(CASE WHEN stock_quantity <= 5 THEN 1 ELSE 0 END) as critical
+      FROM medicines
+      WHERE stock_quantity <= min_stock_level
+    `);
+
+    // Total inventory
+    const [totalInventory] = await query(`
+      SELECT COUNT(*) as count, 
+             COUNT(DISTINCT category_id) as categories
+      FROM medicines
+    `);
+
+    // Monthly revenue (current month)
+    const [monthlyRevenue] = await query(`
+      SELECT COALESCE(SUM(total_amount), 0) as value
+      FROM orders
+      WHERE status = 'completed'
+      AND created_at >= DATE_FORMAT(NOW() ,'%Y-%m-01')
+    `);
+
+    // Get percentage change in monthly revenue compared to previous month
+    let monthlyChange = 0;
+    if (previousMonthSales.value > 0) {
+      monthlyChange = ((currentMonthSales.value - previousMonthSales.value) / previousMonthSales.value) * 100;
+    }
+
+    // Active users
+    const [activeUsers] = await query(`
+      SELECT COUNT(*) as count
+      FROM users
+      WHERE role = 'user'
+    `);
+
+    // New users this week
+    const [newUsers] = await query(`
+      SELECT COUNT(*) as count
+      FROM users
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      AND role = 'user'
+    `);
+
+    // Orders data
+    const [orders] = await query(`
+      SELECT COUNT(*) as count
+      FROM orders
+    `);
+
+    // Pending orders
+    const [pendingOrders] = await query(`
+      SELECT COUNT(*) as count
+      FROM orders
+      WHERE status = 'payment_submitted'
+    `);
+
+    // Recent orders
+    const recentOrders = await query(`
+      SELECT o.id, o.total_amount, o.status, o.created_at,
+             COUNT(oi.id) as item_count
+      FROM orders o
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      GROUP BY o.id
+      ORDER BY o.created_at DESC
+      LIMIT 4
+    `);
+
+    // Low stock medicines
+    const lowStockMedicines = await query(`
+      SELECT id, name, stock_quantity
+      FROM medicines
+      WHERE stock_quantity <= min_stock_level
+      ORDER BY stock_quantity ASC
+      LIMIT 4
+    `);
+
+    res.json({
+      stats: [
+        {
+          title: 'Total Sales',
+          value: Number(totalSales.value) || 0,
+          change: revenueChange.toFixed(1) + '%',
+          isPositive: revenueChange >= 0
+        },
+        {
+          title: 'Low Stock Items',
+          value: lowStockItems[0].count || 0,
+          change: (lowStockItems[0].critical || 0) + ' critical',
+          isPositive: false
+        },
+        {
+          title: 'Total Inventory',
+          value: totalInventory.count || 0,
+          change: (totalInventory.categories || 0) + ' categories',
+          isPositive: true
+        },
+        {
+          title: 'Monthly Revenue',
+          value: Number(monthlyRevenue.value) || 0,
+          change: monthlyChange.toFixed(1) + '%',
+          isPositive: monthlyChange >= 0
+        },
+        {
+          title: 'Active Users',
+          value: activeUsers.count || 0,
+          change: '+' + (newUsers.count || 0) + ' this week',
+          isPositive: true
+        },
+        {
+          title: 'Orders',
+          value: orders.count || 0,
+          change: (pendingOrders.count || 0) + ' pending',
+          isPositive: pendingOrders.count > 0
+        }
+      ],
+      recentOrders: recentOrders,
+      lowStockMedicines: lowStockMedicines
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    res.status(500).json({ message: 'Error fetching dashboard data' });
+  }
+});
+
+// Use route modules
+app.use('/api/paymongo', paymongoRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
+
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
+// Listen
 app.listen(CONFIG.PORT, () => {
   console.log(`Server running on port ${CONFIG.PORT}`);
 });

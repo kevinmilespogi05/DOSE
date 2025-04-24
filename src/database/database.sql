@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 22, 2025 at 02:51 PM
+-- Generation Time: Apr 24, 2025 at 05:17 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -202,14 +202,21 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `user_id`, `total_amount`, `status`, `created_at`, `updated_at`, `payment_method`) VALUES
+('03c3c348-33bb-4d6c-bda9-5488ed47ca28', 3, 47.00, 'payment_submitted', '2025-04-24 14:50:53', '2025-04-24 14:51:31', NULL),
+('1692621b-144f-47fd-9ad9-dd2062e31bc7', 3, 47.00, 'pending_payment', '2025-04-24 14:55:34', '2025-04-24 14:55:34', NULL),
 ('2924a7a7-6602-440f-abfd-88d114fe9127', 3, 47.00, 'pending_payment', '2025-04-21 16:07:19', '2025-04-21 16:07:19', NULL),
 ('327aeab4-1f98-4aa9-919d-efc6ecd504be', 3, 47.00, 'payment_submitted', '2025-04-21 16:21:54', '2025-04-21 16:22:00', NULL),
+('3e4ba988-b2d1-4e79-8224-7a80845c61d8', 3, 47.00, 'payment_submitted', '2025-04-24 14:53:56', '2025-04-24 14:54:03', NULL),
 ('448c3ec8-a7b2-4a81-ad87-4482198d915f', 3, 47.00, 'payment_submitted', '2025-04-21 16:28:25', '2025-04-21 16:28:34', NULL),
 ('45b58985-ebe7-4a2e-bdc4-4e19b9766b4a', 3, 47.00, 'payment_submitted', '2025-04-21 15:46:09', '2025-04-21 15:46:46', NULL),
+('53276b65-a470-46fb-aad9-6cf2019b2c50', 3, 47.00, 'pending_payment', '2025-04-24 14:55:44', '2025-04-24 14:55:44', NULL),
+('62843087-016e-4c7a-b9da-dda84aa6dc92', 3, 47.00, 'payment_submitted', '2025-04-24 14:52:06', '2025-04-24 14:52:13', NULL),
 ('831f9082-d927-4bff-8558-48026dfd76c7', 3, 47.00, 'pending_payment', '2025-04-21 16:02:13', '2025-04-21 16:02:13', NULL),
+('8326f452-f127-43e4-b770-e0183154fe49', 3, 47.00, 'payment_submitted', '2025-04-24 14:55:21', '2025-04-24 14:55:30', NULL),
 ('adb5905c-fbf7-475b-a61f-cf6d580a627c', 3, 47.00, 'payment_submitted', '2025-04-21 15:48:50', '2025-04-21 15:48:57', NULL),
 ('bbb3237f-81bc-4286-b9bf-d2365d476324', 3, 47.00, 'payment_submitted', '2025-04-21 15:48:02', '2025-04-21 15:48:08', NULL),
-('d3330161-fabd-4fb7-8d97-30d05a5157ce', 3, 47.00, 'pending_payment', '2025-04-21 15:45:54', '2025-04-21 15:45:54', NULL);
+('d3330161-fabd-4fb7-8d97-30d05a5157ce', 3, 47.00, 'pending_payment', '2025-04-21 15:45:54', '2025-04-21 15:45:54', NULL),
+('d8edee75-0ffc-478f-8b5c-57f9e6e89bf8', 3, 47.00, 'pending_payment', '2025-04-24 14:52:47', '2025-04-24 14:52:47', NULL);
 
 -- --------------------------------------------------------
 
@@ -248,7 +255,21 @@ INSERT INTO `order_items` (`id`, `order_id`, `medicine_id`, `name`, `unit`, `qua
 (66, '327aeab4-1f98-4aa9-919d-efc6ecd504be', 27, '', '', 1, 22.00, '2025-04-21 16:21:54'),
 (67, '327aeab4-1f98-4aa9-919d-efc6ecd504be', 18, '', '', 1, 25.00, '2025-04-21 16:21:54'),
 (68, '448c3ec8-a7b2-4a81-ad87-4482198d915f', 27, '', '', 1, 22.00, '2025-04-21 16:28:25'),
-(69, '448c3ec8-a7b2-4a81-ad87-4482198d915f', 18, '', '', 1, 25.00, '2025-04-21 16:28:25');
+(69, '448c3ec8-a7b2-4a81-ad87-4482198d915f', 18, '', '', 1, 25.00, '2025-04-21 16:28:25'),
+(70, '03c3c348-33bb-4d6c-bda9-5488ed47ca28', 27, '', '', 1, 22.00, '2025-04-24 14:50:53'),
+(71, '03c3c348-33bb-4d6c-bda9-5488ed47ca28', 18, '', '', 1, 25.00, '2025-04-24 14:50:53'),
+(72, '62843087-016e-4c7a-b9da-dda84aa6dc92', 27, '', '', 1, 22.00, '2025-04-24 14:52:06'),
+(73, '62843087-016e-4c7a-b9da-dda84aa6dc92', 18, '', '', 1, 25.00, '2025-04-24 14:52:06'),
+(74, 'd8edee75-0ffc-478f-8b5c-57f9e6e89bf8', 27, '', '', 1, 22.00, '2025-04-24 14:52:47'),
+(75, 'd8edee75-0ffc-478f-8b5c-57f9e6e89bf8', 18, '', '', 1, 25.00, '2025-04-24 14:52:47'),
+(76, '3e4ba988-b2d1-4e79-8224-7a80845c61d8', 27, '', '', 1, 22.00, '2025-04-24 14:53:56'),
+(77, '3e4ba988-b2d1-4e79-8224-7a80845c61d8', 18, '', '', 1, 25.00, '2025-04-24 14:53:56'),
+(78, '8326f452-f127-43e4-b770-e0183154fe49', 27, '', '', 1, 22.00, '2025-04-24 14:55:21'),
+(79, '8326f452-f127-43e4-b770-e0183154fe49', 18, '', '', 1, 25.00, '2025-04-24 14:55:21'),
+(80, '1692621b-144f-47fd-9ad9-dd2062e31bc7', 27, '', '', 1, 22.00, '2025-04-24 14:55:34'),
+(81, '1692621b-144f-47fd-9ad9-dd2062e31bc7', 18, '', '', 1, 25.00, '2025-04-24 14:55:34'),
+(82, '53276b65-a470-46fb-aad9-6cf2019b2c50', 27, '', '', 1, 22.00, '2025-04-24 14:55:44'),
+(83, '53276b65-a470-46fb-aad9-6cf2019b2c50', 18, '', '', 1, 25.00, '2025-04-24 14:55:44');
 
 -- --------------------------------------------------------
 
@@ -282,7 +303,12 @@ INSERT INTO `payments` (`id`, `order_id`, `amount`, `payment_method`, `source_id
 ('1745252520505', '327aeab4-1f98-4aa9-919d-efc6ecd504be', 47.00, 'gcash', 'src_sK5EE3cTvoc9bDCPdy6P1ukS', NULL, NULL, NULL, 'processing', '2025-04-21 16:22:00', '2025-04-21 16:22:00'),
 ('1745252520508', '327aeab4-1f98-4aa9-919d-efc6ecd504be', 47.00, 'gcash', 'src_sK5EE3cTvoc9bDCPdy6P1ukS', NULL, NULL, NULL, 'processing', '2025-04-21 16:22:00', '2025-04-21 16:22:00'),
 ('1745252914307', '448c3ec8-a7b2-4a81-ad87-4482198d915f', 47.00, 'gcash', 'src_hZGvdsmnDUC5VSDpSMYHEr4d', NULL, NULL, NULL, 'processing', '2025-04-21 16:28:34', '2025-04-21 16:28:34'),
-('1745252914308', '448c3ec8-a7b2-4a81-ad87-4482198d915f', 47.00, 'gcash', 'src_hZGvdsmnDUC5VSDpSMYHEr4d', NULL, NULL, NULL, 'processing', '2025-04-21 16:28:34', '2025-04-21 16:28:34');
+('1745252914308', '448c3ec8-a7b2-4a81-ad87-4482198d915f', 47.00, 'gcash', 'src_hZGvdsmnDUC5VSDpSMYHEr4d', NULL, NULL, NULL, 'processing', '2025-04-21 16:28:34', '2025-04-21 16:28:34'),
+('1745506291717', '03c3c348-33bb-4d6c-bda9-5488ed47ca28', 47.00, 'gcash', 'src_r7p9fHFPeNSPtsnNkwJWUjTF', NULL, NULL, NULL, 'processing', '2025-04-24 14:51:31', '2025-04-24 14:51:31'),
+('1745506333615', '62843087-016e-4c7a-b9da-dda84aa6dc92', 47.00, 'gcash', 'src_sHwv4W1FwvephE8A8QrXDzQq', NULL, NULL, NULL, 'processing', '2025-04-24 14:52:13', '2025-04-24 14:52:13'),
+('1745506443775', '3e4ba988-b2d1-4e79-8224-7a80845c61d8', 47.00, 'gcash', 'src_evt7XNinYaUna7bmWUZoCbWj', NULL, NULL, NULL, 'processing', '2025-04-24 14:54:03', '2025-04-24 14:54:03'),
+('1745506530478', '8326f452-f127-43e4-b770-e0183154fe49', 47.00, 'gcash', 'src_S37NYyQUSEbT4C76vrou3XHX', NULL, NULL, NULL, 'processing', '2025-04-24 14:55:30', '2025-04-24 14:55:30'),
+('1745506530479', '8326f452-f127-43e4-b770-e0183154fe49', 47.00, 'gcash', 'src_S37NYyQUSEbT4C76vrou3XHX', NULL, NULL, NULL, 'processing', '2025-04-24 14:55:30', '2025-04-24 14:55:30');
 
 -- --------------------------------------------------------
 
@@ -292,14 +318,20 @@ INSERT INTO `payments` (`id`, `order_id`, `amount`, `payment_method`, `source_id
 
 CREATE TABLE `prescriptions` (
   `id` int(11) NOT NULL,
-  `patient_name` varchar(100) NOT NULL,
-  `doctor_name` varchar(100) NOT NULL,
-  `issue_date` date NOT NULL,
-  `expiry_date` date NOT NULL,
-  `status` enum('ACTIVE','COMPLETED','EXPIRED') DEFAULT 'ACTIVE',
+  `user_id` int(11) NOT NULL,
+  `image_url` varchar(255) NOT NULL,
+  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `notes` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `prescriptions`
+--
+
+INSERT INTO `prescriptions` (`id`, `user_id`, `image_url`, `status`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 3, '/images/prescriptions/prescription-1745507154197.jpg', 'approved', 'pogi ah', '2025-04-24 15:05:54', '2025-04-24 15:06:14');
 
 -- --------------------------------------------------------
 
@@ -312,9 +344,15 @@ CREATE TABLE `prescription_items` (
   `prescription_id` int(11) NOT NULL,
   `medicine_id` int(11) NOT NULL,
   `quantity` int(11) NOT NULL,
-  `dosage` varchar(100) DEFAULT NULL,
-  `instructions` text DEFAULT NULL
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `prescription_items`
+--
+
+INSERT INTO `prescription_items` (`id`, `prescription_id`, `medicine_id`, `quantity`, `created_at`) VALUES
+(1, 1, 21, 1, '2025-04-24 15:14:49');
 
 -- --------------------------------------------------------
 
@@ -394,7 +432,7 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `role`, `created_at`, `updated_at`) VALUES
 (2, 'superadmin', 'superadmin@example.com', '$2y$10$PQD.Y8OPwoKV2TlHOYVxeOJaZAZKhHyXXhvZ5tqUGtxYsG0Ej4wPm', 'admin', '2025-03-13 04:13:17', '2025-03-13 04:13:17'),
 (3, 'kevin', 'kevin@gmail.com', '$2a$10$5Qtp8f0AziT5MNo3fwOPzuWC2YMXxQaCWZutR/YDj8igsgNRg.iV2', 'user', '2025-03-13 04:25:12', '2025-03-13 04:25:12'),
-(4, 'admin', 'admin@example.com', '$2a$10$ohXuuCfIS1UK6.ycVvAxcO2OlBAPSIOzVwbnnDDR0l4eBPR95xiMG', 'admin', '2025-03-13 04:32:01', '2025-03-13 04:32:01'),
+(4, 'admin', 'admin@gmail.com', '$2a$10$ohXuuCfIS1UK6.ycVvAxcO2OlBAPSIOzVwbnnDDR0l4eBPR95xiMG', 'admin', '2025-03-13 04:32:01', '2025-03-13 04:32:01'),
 (5, 'lebron', 'lebron@gmail.com', '$2a$10$LQIpAd/VjX7b/H5eL1KhguT/wxh/hsdFyUhug.Bz5CgHNkn5FPNRe', 'user', '2025-03-13 07:49:35', '2025-03-13 07:49:35'),
 (6, 'edgar', 'edgar@gmail.com', '$2a$10$HvRjBsEArICXNNaMwfOB/OtQ4STe6ceY3hX7Iav9PXidEL6ahc/aS', 'user', '2025-04-01 05:23:14', '2025-04-01 05:23:14');
 
@@ -476,7 +514,8 @@ ALTER TABLE `payments`
 --
 ALTER TABLE `prescriptions`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_prescription_status` (`status`);
+  ADD KEY `idx_prescriptions_user` (`user_id`),
+  ADD KEY `idx_prescriptions_status` (`status`);
 
 --
 -- Indexes for table `prescription_items`
@@ -559,19 +598,19 @@ ALTER TABLE `medicine_categories`
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=84;
 
 --
 -- AUTO_INCREMENT for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `prescription_items`
 --
 ALTER TABLE `prescription_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `sessions`
@@ -649,11 +688,17 @@ ALTER TABLE `payments`
   ADD CONSTRAINT `payments_order_id_fk` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE;
 
 --
+-- Constraints for table `prescriptions`
+--
+ALTER TABLE `prescriptions`
+  ADD CONSTRAINT `prescriptions_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `prescription_items`
 --
 ALTER TABLE `prescription_items`
-  ADD CONSTRAINT `prescription_items_ibfk_1` FOREIGN KEY (`prescription_id`) REFERENCES `prescriptions` (`id`),
-  ADD CONSTRAINT `prescription_items_ibfk_2` FOREIGN KEY (`medicine_id`) REFERENCES `medicines` (`id`);
+  ADD CONSTRAINT `prescription_items_medicine_fk` FOREIGN KEY (`medicine_id`) REFERENCES `medicines` (`id`),
+  ADD CONSTRAINT `prescription_items_prescription_fk` FOREIGN KEY (`prescription_id`) REFERENCES `prescriptions` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `sessions`

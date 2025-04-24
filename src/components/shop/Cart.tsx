@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Minus, Plus, Trash2 } from 'lucide-react';
+import { Minus, Plus, Trash2, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import PaymongoCheckout from '../payment/PaymongoCheckout';
 import { formatPeso } from '../../utils/currency';
+import { Link } from 'react-router-dom';
+import { payMongoStatus } from '../../utils/paymongo';
 
 interface CartItem {
   id: number;
@@ -14,6 +16,7 @@ interface CartItem {
   quantity: number;
   unit: string;
   image_url?: string;
+  requires_prescription: boolean;
 }
 
 const Cart = () => {
@@ -24,10 +27,18 @@ const Cart = () => {
   const [orderId, setOrderId] = useState<string | null>(null);
   const { user } = useAuth();
   const { updateCartCount } = useCart();
+  const [prescriptionValidationError, setPrescriptionValidationError] = useState<string | null>(null);
+  const [hasApprovedPrescriptions, setHasApprovedPrescriptions] = useState(false);
 
   useEffect(() => {
     fetchCartItems();
   }, []);
+
+  useEffect(() => {
+    if (cartItems.some(item => item.requires_prescription)) {
+      checkApprovedPrescriptions();
+    }
+  }, [cartItems]);
 
   const fetchCartItems = async () => {
     try {
@@ -87,6 +98,22 @@ const Cart = () => {
     }, 0);
   };
 
+  const checkApprovedPrescriptions = async () => {
+    try {
+      const response = await axios.get('/api/prescriptions/user', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      const hasApproved = response.data.some((p: any) => p.status === 'approved');
+      setHasApprovedPrescriptions(hasApproved);
+    } catch (err) {
+      console.error('Error checking prescriptions:', err);
+      setHasApprovedPrescriptions(false);
+    }
+  };
+
   const handleCheckout = async () => {
     try {
       // Validate cart is not empty
@@ -101,6 +128,15 @@ const Cart = () => {
         return;
       }
 
+      // Validate prescription requirements
+      const requiresPrescription = cartItems.some(item => item.requires_prescription);
+      if (requiresPrescription && !hasApprovedPrescriptions) {
+        setPrescriptionValidationError('Some items in your cart require a valid prescription. Please upload a prescription and wait for approval before proceeding.');
+        return;
+      } else {
+        setPrescriptionValidationError(null);
+      }
+
       // Validate all items have valid quantities
       const invalidItems = cartItems.filter(item => item.quantity < 1);
       if (invalidItems.length > 0) {
@@ -109,7 +145,7 @@ const Cart = () => {
       }
 
       // Validate Paymongo configuration
-      if (!import.meta.env.VITE_PAYMONGO_PUBLIC_KEY || !import.meta.env.VITE_PAYMONGO_SECRET_KEY) {
+      if (!payMongoStatus.isConfigured) {
         console.error('Paymongo configuration missing');
         setError('Payment system is not properly configured. Please contact support.');
         return;
@@ -279,6 +315,25 @@ const Cart = () => {
           amount={calculateTotal()}
           onClose={handleClosePayment}
         />
+      )}
+
+      {prescriptionValidationError && (
+        <div className="my-4 p-4 border border-red-300 bg-red-50 rounded-md">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <FileText className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Prescription Required</h3>
+              <div className="mt-1 text-sm text-red-700">
+                <p>{prescriptionValidationError}</p>
+                <Link to="/prescriptions" className="mt-2 inline-block text-red-700 font-medium underline">
+                  Upload your prescription here
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

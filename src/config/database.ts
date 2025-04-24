@@ -19,8 +19,21 @@ async function testConnection() {
     const connection = await pool.getConnection();
     console.log('Database connected successfully');
     connection.release();
+    return true;
   } catch (error) {
     console.error('Error connecting to the database:', error);
+    
+    // More detailed error handling
+    if (error instanceof Error) {
+      if (error.message.includes('ECONNREFUSED')) {
+        console.error('Could not connect to MySQL server. Make sure it is running.');
+      } else if (error.message.includes('ER_ACCESS_DENIED_ERROR')) {
+        console.error('Access denied. Check your database username and password.');
+      } else if (error.message.includes('ER_BAD_DB_ERROR')) {
+        console.error('Database "project_db" does not exist. Create it before running the application.');
+      }
+    }
+    return false;
   }
 }
 

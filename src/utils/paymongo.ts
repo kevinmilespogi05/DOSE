@@ -2,8 +2,12 @@ import axios from 'axios';
 import { CLIENT_CONFIG } from '../config/client-config';
 
 const PAYMONGO_API_URL = 'https://api.paymongo.com/v1';
-const PAYMONGO_PUBLIC_KEY = CLIENT_CONFIG.PAYMONGO.PUBLIC_KEY;
-const PAYMONGO_SECRET_KEY = CLIENT_CONFIG.PAYMONGO.SECRET_KEY;
+const PAYMONGO_PUBLIC_KEY = CLIENT_CONFIG.PAYMONGO?.PUBLIC_KEY;
+const PAYMONGO_SECRET_KEY = CLIENT_CONFIG.PAYMONGO?.SECRET_KEY;
+const FRONTEND_URL = CLIENT_CONFIG.PAYMONGO?.FRONTEND_URL;
+
+// Check if PayMongo is configured
+const isPayMongoConfigured = Boolean(PAYMONGO_PUBLIC_KEY && PAYMONGO_SECRET_KEY && FRONTEND_URL);
 
 interface PaymentMethodData {
   type: 'gcash' | 'grab_pay';
@@ -30,7 +34,9 @@ interface PaymentIntentData {
 export const createPaymentMethod = async (data: PaymentMethodData) => {
   try {
     if (!PAYMONGO_PUBLIC_KEY) {
-      throw new Error('PayMongo public key is not configured');
+      const error = new Error('PayMongo public key is not configured');
+      console.error(error.message);
+      throw error;
     }
 
     const response = await axios.post(
@@ -60,7 +66,9 @@ export const createPaymentMethod = async (data: PaymentMethodData) => {
 export const createPaymentIntent = async (data: PaymentIntentData) => {
   try {
     if (!PAYMONGO_SECRET_KEY) {
-      throw new Error('PayMongo secret key is not configured');
+      const error = new Error('PayMongo secret key is not configured');
+      console.error(error.message);
+      throw error;
     }
 
     const response = await axios.post(
@@ -95,11 +103,15 @@ export const createPaymentIntent = async (data: PaymentIntentData) => {
 export const createSource = async (amount: number, type: 'gcash' | 'grab_pay') => {
   try {
     if (!PAYMONGO_PUBLIC_KEY) {
-      throw new Error('PayMongo public key is not configured');
+      const error = new Error('PayMongo public key is not configured');
+      console.error(error.message);
+      throw error;
     }
 
-    if (!CLIENT_CONFIG.PAYMONGO.FRONTEND_URL) {
-      throw new Error('Frontend URL is not configured');
+    if (!FRONTEND_URL) {
+      const error = new Error('Frontend URL is not configured');
+      console.error(error.message);
+      throw error;
     }
 
     const response = await axios.post(
@@ -111,8 +123,8 @@ export const createSource = async (amount: number, type: 'gcash' | 'grab_pay') =
             currency: 'PHP',
             type,
             redirect: {
-              success: `${CLIENT_CONFIG.PAYMONGO.FRONTEND_URL}/payment/success`,
-              failed: `${CLIENT_CONFIG.PAYMONGO.FRONTEND_URL}/payment/failed`,
+              success: `${FRONTEND_URL}/payment/success`,
+              failed: `${FRONTEND_URL}/payment/failed`,
             },
             billing: {
               name: 'Pharmacy Customer',
@@ -138,7 +150,9 @@ export const createSource = async (amount: number, type: 'gcash' | 'grab_pay') =
 export const verifyPayment = async (sourceId: string) => {
   try {
     if (!PAYMONGO_SECRET_KEY) {
-      throw new Error('PayMongo secret key is not configured');
+      const error = new Error('PayMongo secret key is not configured');
+      console.error(error.message);
+      throw error;
     }
 
     const response = await axios.get(
@@ -155,4 +169,9 @@ export const verifyPayment = async (sourceId: string) => {
     console.error('Error verifying payment:', error);
     throw error;
   }
+};
+
+// Export config status to allow components to check if PayMongo is configured
+export const payMongoStatus = {
+  isConfigured: isPayMongoConfigured
 }; 

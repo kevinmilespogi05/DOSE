@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite",
     "server": "tsx watch src/api/server.ts",
+    "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "migrate": "tsx src/database/migrations/004_create_orders_and_payments.ts"
+    "migrate": "tsx src/database/migrations/004_create_orders_and_payments.ts",
+    "migrate:prescriptions": "tsx src/database/migrations/005_update_prescriptions.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -54,6 +56,7 @@
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.18",
+    "concurrently": "^9.1.2",
     "eslint": "^9.9.1",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.11",

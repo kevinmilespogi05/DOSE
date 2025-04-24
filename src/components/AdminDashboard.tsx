@@ -1,58 +1,128 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { format } from 'date-fns';
 import { 
   TrendingUp, 
   Package, 
   AlertTriangle, 
   DollarSign,
   Users,
-  ShoppingCart
+  ShoppingCart,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 
+interface DashboardStat {
+  title: string;
+  value: number;
+  change: string;
+  isPositive: boolean;
+}
+
+interface RecentOrder {
+  id: string;
+  total_amount: number;
+  status: string;
+  created_at: string;
+  item_count: number;
+}
+
+interface LowStockMedicine {
+  id: number;
+  name: string;
+  stock_quantity: number;
+}
+
+interface DashboardData {
+  stats: DashboardStat[];
+  recentOrders: RecentOrder[];
+  lowStockMedicines: LowStockMedicine[];
+}
+
 const AdminDashboard = () => {
-  const stats = [
-    {
-      title: 'Total Sales',
-      value: '$12,456',
-      icon: DollarSign,
-      change: '+12.5%',
-      color: 'bg-green-500',
-    },
-    {
-      title: 'Low Stock Items',
-      value: '23',
-      icon: AlertTriangle,
-      change: '5 critical',
-      color: 'bg-red-500',
-    },
-    {
-      title: 'Total Inventory',
-      value: '1,234',
-      icon: Package,
-      change: '45 categories',
-      color: 'bg-blue-500',
-    },
-    {
-      title: 'Monthly Revenue',
-      value: '$34,567',
-      icon: TrendingUp,
-      change: '+8.2%',
-      color: 'bg-purple-500',
-    },
-    {
-      title: 'Active Users',
-      value: '456',
-      icon: Users,
-      change: '+15 this week',
-      color: 'bg-yellow-500',
-    },
-    {
-      title: 'Orders',
-      value: '89',
-      icon: ShoppingCart,
-      change: '12 pending',
-      color: 'bg-indigo-500',
-    },
-  ];
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
+    stats: [],
+    recentOrders: [],
+    lowStockMedicines: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const response = await axios.get('/api/admin/dashboard', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        setDashboardData(response.data);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again later.');
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const icons = {
+    'Total Sales': DollarSign,
+    'Low Stock Items': AlertTriangle,
+    'Total Inventory': Package,
+    'Monthly Revenue': TrendingUp,
+    'Active Users': Users,
+    'Orders': ShoppingCart
+  };
+
+  const colorClasses = {
+    'Total Sales': 'bg-green-500',
+    'Low Stock Items': 'bg-red-500',
+    'Total Inventory': 'bg-blue-500',
+    'Monthly Revenue': 'bg-purple-500',
+    'Active Users': 'bg-yellow-500',
+    'Orders': 'bg-indigo-500'
+  };
+
+  const formatCurrency = (value: number): string => {
+    return '₱' + value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const formatStatus = (status: string): string => {
+    return status.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-red-600 mb-4">{error}</div>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -62,8 +132,10 @@ const AdminDashboard = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
+        {dashboardData.stats.map((stat, index) => {
+          const IconComponent = icons[stat.title as keyof typeof icons];
+          const colorClass = colorClasses[stat.title as keyof typeof colorClasses];
+          
           return (
             <div
               key={index}
@@ -73,12 +145,25 @@ const AdminDashboard = () => {
                 <div>
                   <p className="text-gray-500 text-sm">{stat.title}</p>
                   <h3 className="text-2xl font-bold text-gray-800 mt-1">
-                    {stat.value}
+                    {stat.title.includes('Revenue') || stat.title.includes('Sales') 
+                      ? formatCurrency(stat.value)
+                      : stat.value.toLocaleString()}
                   </h3>
-                  <p className="text-sm text-gray-600 mt-1">{stat.change}</p>
+                  <p className="flex items-center text-sm mt-1">
+                    {stat.isPositive !== undefined && (
+                      stat.isPositive ? (
+                        <ArrowUp className="w-3 h-3 text-green-500 mr-1" />
+                      ) : (
+                        <ArrowDown className="w-3 h-3 text-red-500 mr-1" />
+                      )
+                    )}
+                    <span className={stat.isPositive ? 'text-green-600' : 'text-gray-600'}>
+                      {stat.change}
+                    </span>
+                  </p>
                 </div>
-                <div className={`${stat.color} p-3 rounded-full`}>
-                  <Icon className="w-6 h-6 text-white" />
+                <div className={`${colorClass} p-3 rounded-full`}>
+                  <IconComponent className="w-6 h-6 text-white" />
                 </div>
               </div>
             </div>
@@ -92,18 +177,27 @@ const AdminDashboard = () => {
             Recent Orders
           </h3>
           <div className="space-y-4">
-            {[1, 2, 3, 4].map((_, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between border-b pb-4"
-              >
-                <div>
-                  <p className="font-medium">Order #{1000 + index}</p>
-                  <p className="text-sm text-gray-500">3 items • Processing</p>
+            {dashboardData.recentOrders.length > 0 ? (
+              dashboardData.recentOrders.map((order, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between border-b pb-4"
+                >
+                  <div>
+                    <p className="font-medium">Order #{order.id.substring(0, 8)}</p>
+                    <p className="text-sm text-gray-500">
+                      {order.item_count} {order.item_count === 1 ? 'item' : 'items'} • {formatStatus(order.status)}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {format(new Date(order.created_at), 'MMM d, yyyy')}
+                    </p>
+                  </div>
+                  <p className="font-semibold text-green-600">{formatCurrency(Number(order.total_amount))}</p>
                 </div>
-                <p className="font-semibold text-green-600">$123.45</p>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-4">No recent orders found</p>
+            )}
           </div>
         </div>
 
@@ -112,20 +206,26 @@ const AdminDashboard = () => {
             Low Stock Alert
           </h3>
           <div className="space-y-4">
-            {[1, 2, 3, 4].map((_, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between border-b pb-4"
-              >
-                <div>
-                  <p className="font-medium">Medicine {index + 1}</p>
-                  <p className="text-sm text-gray-500">5 units left</p>
+            {dashboardData.lowStockMedicines.length > 0 ? (
+              dashboardData.lowStockMedicines.map((medicine, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between border-b pb-4"
+                >
+                  <div>
+                    <p className="font-medium">{medicine.name}</p>
+                    <p className="text-sm text-gray-500">
+                      {medicine.stock_quantity} {medicine.stock_quantity === 1 ? 'unit' : 'units'} left
+                    </p>
+                  </div>
+                  <button className="text-blue-600 hover:text-blue-800">
+                    Reorder
+                  </button>
                 </div>
-                <button className="text-blue-600 hover:text-blue-800">
-                  Reorder
-                </button>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-4">No low stock items found</p>
+            )}
           </div>
         </div>
       </div>

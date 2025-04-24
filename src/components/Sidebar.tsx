@@ -13,7 +13,12 @@ import {
   History,
   Menu,
   X,
-  LogOut
+  LogOut,
+  ShoppingBag,
+  CreditCard,
+  PieChart,
+  FileText,
+  FileCheck
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -25,20 +30,18 @@ const Sidebar = () => {
   
   const adminMenuItems = [
     { icon: Home, label: 'Dashboard', path: '/admin' },
-    { icon: Package, label: 'Inventory', path: '/admin/inventory' },
     { icon: Users, label: 'Users', path: '/admin/users' },
     { icon: ShoppingCart, label: 'Orders', path: '/admin/orders' },
-    { icon: ClipboardList, label: 'Products', path: '/admin/products' },
-    { icon: UserCog, label: 'Suppliers', path: '/admin/suppliers' },
     { icon: TrendingUp, label: 'Reports', path: '/admin/reports' },
-    { icon: Settings, label: 'Settings', path: '/admin/settings' },
     { icon: Package, label: 'Medicines', path: '/admin/medicines' },
+    { icon: PieChart, label: 'Prescriptions', path: '/admin/prescriptions' },
   ];
 
   const userMenuItems = [
     { icon: ShoppingCart, label: 'Shop', path: '/shop' },
     { icon: History, label: 'Order History', path: '/order-history' },
-    { icon: Settings, label: 'Settings', path: '/settings' },
+    { icon: ShoppingBag, label: 'Cart', path: '/cart' },
+    { icon: FileText, label: 'Prescriptions', path: '/prescriptions' },
   ];
 
   const menuItems = isAdmin ? adminMenuItems : userMenuItems;

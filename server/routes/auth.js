@@ -62,7 +62,11 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { 
+        id: user.id, 
+        email: user.email,
+        is_admin: user.is_admin === 1
+      },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -70,7 +74,12 @@ router.post('/login', async (req, res) => {
     res.json({
       message: 'Login successful',
       token,
-      user: { id: user.id, name: user.name, email: user.email }
+      user: { 
+        id: user.id, 
+        name: user.name, 
+        email: user.email,
+        is_admin: user.is_admin === 1
+      }
     });
   } catch (error) {
     console.error('Login error:', error);

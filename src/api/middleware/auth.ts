@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import CONFIG from '../../config/config';
+import { query } from '../../utils/db';
 
 interface JwtPayload {
   userId: string;
@@ -16,26 +16,35 @@ declare global {
   }
 }
 
-export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
+// Authentication middleware
+export const authenticateToken = (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) {
-    return res.status(401).json({ message: 'Authentication required' });
-  }
+  if (!token) return res.sendStatus(401);
 
-  try {
-    const decoded = jwt.verify(token, CONFIG.JWT_SECRET) as JwtPayload;
-    req.user = decoded;
+  jwt.verify(token, CONFIG.JWT_SECRET, (err: any, user: any) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
     next();
-  } catch (error) {
-    return res.status(403).json({ message: 'Invalid or expired token' });
-  }
+  });
 };
 
-export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Admin access required' });
+// Admin middleware
+export const isAdmin = async (req: any, res: any, next: any) => {
+  try {
+    const users = await query(
+      'SELECT role FROM users WHERE id = ?',
+      [req.user.userId]
+    );
+
+    if (users.length === 0 || users[0].role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    res.status(500).json({ message: 'Server error' });
   }
-  next();
 }; 

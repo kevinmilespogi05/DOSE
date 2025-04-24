@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Search, ShoppingCart, Check, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Search, ShoppingCart, Check, ChevronLeft, ChevronRight, ArrowUpDown, FileText } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { formatPeso } from '../../utils/currency';
 
@@ -17,6 +17,7 @@ interface Medicine {
   supplier_name: string;
   image_url: string;
   description: string;
+  requires_prescription: boolean;
 }
 
 interface PaginatedResponse {
@@ -184,6 +185,20 @@ const Shop = () => {
         </div>
       </div>
 
+      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            <FileText className="h-5 w-5 text-blue-500" />
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-blue-800">Prescription Required</h3>
+            <div className="mt-1 text-sm text-blue-700">
+              <p>Some medicines require a valid prescription. Look for the "Rx" badge on products. You can upload your prescription in the <Link to="/prescriptions" className="font-medium underline">Prescriptions</Link> section.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Sorting Options */}
       <div className="flex flex-wrap gap-2 mb-4">
         <button
@@ -222,7 +237,7 @@ const Shop = () => {
               onClick={() => navigate(`/shop/medicine/${medicine.id}`)}
               className="cursor-pointer"
             >
-              <div className="aspect-w-16 aspect-h-9 relative">
+              <div className="relative">
                 <img
                   src={medicine.image_url || '/images/medicine-placeholder.png'}
                   alt={medicine.name}
@@ -232,11 +247,11 @@ const Shop = () => {
                     target.src = '/images/medicine-placeholder.png';
                   }}
                 />
-                <div className="absolute top-2 right-2">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
-                    {medicine.category_name}
-                  </span>
-                </div>
+                {medicine.requires_prescription && (
+                  <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                    Rx
+                  </div>
+                )}
               </div>
 
               <div className="p-4">
