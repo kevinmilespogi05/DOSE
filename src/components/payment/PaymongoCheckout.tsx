@@ -54,6 +54,13 @@ const PaymongoCheckout: React.FC<PaymongoCheckoutProps> = ({ orderId, amount, on
               }
             });
             
+            // Clear all items from cart
+            await axios.delete('/api/cart/clear', {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              }
+            });
+            
             // Show success message and close modal
             alert('Payment successful!');
             onClose();

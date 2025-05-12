@@ -211,9 +211,23 @@ const Cart = () => {
   const handleClosePayment = () => {
     setShowPayment(false);
     setOrderId(null);
-    // Refresh cart items after successful payment
-    fetchCartItems();
-    updateCartCount();
+    
+    // Clear cart items explicitly to handle any missed cases
+    axios.delete('/api/cart/clear', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }).then(() => {
+      // Refresh cart items after payment processing
+      fetchCartItems();
+      // Update cart count in the navigation
+      updateCartCount();
+    }).catch(err => {
+      console.error('Error clearing cart:', err);
+      // Still try to refresh cart items and count
+      fetchCartItems();
+      updateCartCount();
+    });
   };
 
   if (loading) return (

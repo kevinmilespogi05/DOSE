@@ -646,6 +646,32 @@ app.get('/api/cart', authenticateToken, async (req: any, res) => {
   }
 });
 
+// New endpoint to clear all cart items
+app.delete('/api/cart/clear', authenticateToken, async (req: any, res) => {
+  try {
+    // Get cart for user
+    const cart = await query(
+      'SELECT id FROM cart WHERE user_id = ?',
+      [req.user.userId]
+    );
+
+    if (cart.length === 0) {
+      return res.json({ message: 'Cart is already empty' });
+    }
+
+    // Clear all items from the cart
+    await execute(
+      'DELETE FROM cart_items WHERE cart_id = ?',
+      [cart[0].id]
+    );
+
+    res.json({ message: 'Cart cleared successfully' });
+  } catch (error) {
+    console.error('Error clearing cart:', error);
+    res.status(500).json({ message: 'Error clearing cart' });
+  }
+});
+
 app.post('/api/cart/items', authenticateToken, async (req: any, res) => {
   try {
     const { medicine_id, quantity } = req.body;
@@ -1068,17 +1094,25 @@ app.post('/api/payments/verify', authenticateToken, async (req: any, res) => {
 
     // Create payment record
     const paymentId = Date.now().toString();
-    await execute(
-      `INSERT INTO payments (id, order_id, amount, payment_method, source_id, status)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [paymentId, orderId, orders[0].total_amount, 'gcash', sourceId, 'processing']
-    );
+    await withTransaction(async () => {
+      await execute(
+        `INSERT INTO payments (id, order_id, amount, payment_method, source_id, status)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [paymentId, orderId, orders[0].total_amount, 'gcash', sourceId, 'processing']
+      );
 
-    // Update order status
-    await execute(
-      'UPDATE orders SET status = ? WHERE id = ?',
-      ['payment_submitted', orderId]
-    );
+      // Update order status
+      await execute(
+        'UPDATE orders SET status = ? WHERE id = ?',
+        ['payment_submitted', orderId]
+      );
+
+      // Clear cart after payment is submitted
+      await execute(
+        'DELETE FROM cart_items WHERE cart_id IN (SELECT id FROM cart WHERE user_id = ?)',
+        [userId]
+      );
+    });
 
     res.status(200).json({ message: 'Payment verified successfully' });
   } catch (error) {

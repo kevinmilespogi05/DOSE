@@ -24,6 +24,7 @@ import {
   X as XIcon,
   AlertCircle
 } from 'lucide-react';
+import { showConfirmation, showSuccess, showError, showLoading, closeAlert, showInfo, showToast } from '../../utils/swalUtil';
 
 interface Prescription {
   id: number;
@@ -42,11 +43,6 @@ interface Medicine {
   name: string;
   price: number;
   description: string;
-}
-
-interface ToastProps {
-  type: 'success' | 'error' | 'info';
-  message: string;
 }
 
 const PrescriptionManagement = () => {
@@ -70,7 +66,6 @@ const PrescriptionManagement = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const imageRef = useRef<HTMLImageElement>(null);
   const { user } = useAuth();
-  const [toast, setToast] = useState<ToastProps | null>(null);
 
   useEffect(() => {
     fetchPrescriptions();
@@ -162,18 +157,22 @@ const PrescriptionManagement = () => {
     }
   };
 
-  const showToast = (type: 'success' | 'error' | 'info', message: string) => {
-    setToast({ type, message });
-    
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-      setToast(null);
-    }, 5000);
-  };
-
   const handleStatusUpdate = async (status: 'approved' | 'rejected') => {
     if (!selectedPrescription) return;
+    
+    const statusText = status === 'approved' ? 'approve' : 'reject';
+    
+    const result = await showConfirmation(
+      `${status === 'approved' ? 'Approve' : 'Reject'} Prescription`,
+      `Are you sure you want to ${statusText} this prescription?`,
+      `Yes, ${statusText}`,
+      'Cancel'
+    );
+    
+    if (!result.isConfirmed) return;
 
+    showLoading(`${status === 'approved' ? 'Approving' : 'Rejecting'} prescription...`);
+    
     try {
       setUpdatingStatus(true);
       const response = await axios.put(
@@ -201,17 +200,20 @@ const PrescriptionManagement = () => {
         updated_at: new Date().toISOString()
       });
 
+      closeAlert();
+      showSuccess(
+        `Prescription ${status === 'approved' ? 'Approved' : 'Rejected'}`,
+        `The prescription has been successfully ${status}.`
+      );
+      
       // If approved, fetch recommended medicines
       if (status === 'approved') {
         fetchRecommendedMedicines(selectedPrescription.id);
       }
-
-      showToast('success', `Prescription has been ${status}`);
-      setError(null);
     } catch (err) {
-      console.error('Error updating prescription status:', err);
-      setError('Failed to update prescription status. Please try again.');
-      showToast('error', 'Failed to update prescription status');
+      console.error(`Error ${status} prescription:`, err);
+      closeAlert();
+      showError('Action Failed', `Failed to ${statusText} the prescription. Please try again.`);
     } finally {
       setUpdatingStatus(false);
     }
@@ -219,40 +221,55 @@ const PrescriptionManagement = () => {
 
   const handleBatchStatusUpdate = async (status: 'approved' | 'rejected') => {
     if (selectedItems.length === 0) return;
+    
+    const statusText = status === 'approved' ? 'approve' : 'reject';
+    
+    const result = await showConfirmation(
+      `Batch ${status === 'approved' ? 'Approve' : 'Reject'}`,
+      `Are you sure you want to ${statusText} ${selectedItems.length} selected prescription(s)?`,
+      `Yes, ${statusText} all`,
+      'Cancel'
+    );
+    
+    if (!result.isConfirmed) return;
 
+    showLoading(`${status === 'approved' ? 'Approving' : 'Rejecting'} prescriptions...`);
+    
     try {
       setIsBatchProcessing(true);
       
-      // Use the batch update endpoint instead of processing one by one
-      const response = await axios.post(
-        '/api/prescriptions/admin/batch-update',
-        {
-          prescriptionIds: selectedItems,
-          status,
-          notes: `Batch ${status} by admin on ${new Date().toLocaleString()}`
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+      // Process each selected prescription
+      for (const id of selectedItems) {
+        await axios.put(
+          `/api/prescriptions/${id}/status`,
+          { status, notes: '' },
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
           }
-        }
-      );
+        );
+      }
 
-      // Refresh prescriptions list
-      setRefreshKey(prev => prev + 1);
-      
-      // Clear selection
+      // Update prescriptions list
+      setPrescriptions(prescriptions.map(p => 
+        selectedItems.includes(p.id)
+          ? { ...p, status, updated_at: new Date().toISOString() }
+          : p
+      ));
+
       setSelectedItems([]);
       setShowBatchActions(false);
       
-      // Show success message
-      showToast('success', `Successfully updated ${selectedItems.length} prescriptions`);
-      
-      setError(null);
+      closeAlert();
+      showSuccess(
+        'Batch Action Complete',
+        `Successfully ${status} ${selectedItems.length} prescription(s).`
+      );
     } catch (err) {
-      console.error('Error in batch update:', err);
-      setError('Failed to complete batch update. Some prescriptions may not have been processed.');
-      showToast('error', 'Failed to process batch update');
+      console.error(`Error batch ${status} prescriptions:`, err);
+      closeAlert();
+      showError('Batch Action Failed', `Failed to ${statusText} some prescriptions. Please try again.`);
     } finally {
       setIsBatchProcessing(false);
     }
@@ -334,29 +351,6 @@ const PrescriptionManagement = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Toast notification */}
-      {toast && (
-        <div 
-          className={`fixed top-4 right-4 z-50 flex items-center p-4 rounded-lg shadow-lg animate-fade-in 
-            ${toast.type === 'success' ? 'bg-green-100 text-green-800' : 
-              toast.type === 'error' ? 'bg-red-100 text-red-800' : 
-              'bg-blue-100 text-blue-800'}`}
-        >
-          <span className="mr-2">
-            {toast.type === 'success' ? <CheckCircle size={20} /> : 
-             toast.type === 'error' ? <AlertCircle size={20} /> : 
-             <FileText size={20} />}
-          </span>
-          <p className="mr-4">{toast.message}</p>
-          <button 
-            onClick={() => setToast(null)}
-            className="ml-auto text-gray-500 hover:text-gray-700"
-          >
-            <XIcon size={16} />
-          </button>
-        </div>
-      )}
-
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Prescription Management</h1>
         
@@ -410,7 +404,6 @@ const PrescriptionManagement = () => {
         </div>
       </div>
       
-      {/* Filters and Search */}
       <div className="bg-white shadow-sm rounded-lg mb-6 p-4">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
@@ -476,7 +469,6 @@ const PrescriptionManagement = () => {
       </div>
 
       <div className="flex flex-col md:flex-row gap-8">
-        {/* Prescriptions List */}
         <div className="w-full md:w-1/2 bg-white shadow-md rounded-lg p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Prescriptions ({filteredPrescriptions.length})</h2>
@@ -563,7 +555,6 @@ const PrescriptionManagement = () => {
           )}
         </div>
 
-        {/* Prescription Details */}
         <div className="w-full md:w-1/2 bg-white shadow-md rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Prescription Details</h2>
           

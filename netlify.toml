@@ -1,0 +1,19 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Handle SPA routing (redirect all requests to index.html)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Proxy API requests to your backend server
+[[redirects]]
+  from = "/api/*"
+  to = "https://your-backend-api-url.com/api/:splat"
+  status = 200
+  force = true 

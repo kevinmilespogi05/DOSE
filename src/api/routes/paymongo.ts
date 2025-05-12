@@ -77,6 +77,12 @@ router.post('/create-source', authenticateToken, async (req, res) => {
         'UPDATE orders SET status = ? WHERE id = ?',
         ['payment_submitted', orderId]
       );
+      
+      // Clear cart after payment is submitted
+      await execute(
+        'DELETE FROM cart_items WHERE cart_id IN (SELECT id FROM cart WHERE user_id = ?)',
+        [userId]
+      );
     });
 
     res.json({
@@ -189,19 +195,38 @@ async function handleSuccessfulPayment(data: any) {
       ['paid', paymentId]
     );
 
-    // Get order ID from payment
+    // Get order ID and user_id from payment
     const payments = await execute(
-      'SELECT order_id FROM payments WHERE payment_intent_id = ?',
+      `SELECT p.order_id, o.user_id 
+       FROM payments p
+       JOIN orders o ON p.order_id = o.id
+       WHERE p.payment_intent_id = ?`,
       [paymentId]
     );
 
     if (payments.length === 0) return;
 
+    const { order_id, user_id } = payments[0];
+
     // Update order status
     await execute(
       'UPDATE orders SET status = ? WHERE id = ?',
-      ['completed', payments[0].order_id]
+      ['completed', order_id]
     );
+
+    // Get cart ID for this user
+    const carts = await execute(
+      'SELECT id FROM cart WHERE user_id = ?',
+      [user_id]
+    );
+
+    if (carts.length > 0) {
+      // Clear cart items
+      await execute(
+        'DELETE FROM cart_items WHERE cart_id = ?',
+        [carts[0].id]
+      );
+    }
   });
 }
 

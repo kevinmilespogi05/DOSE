@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Upload } from 'lucide-react';
 import axiosInstance from '../../utils/axios';
+import { showLoading, closeAlert, showSuccess, showError } from '../../utils/swalUtil';
 
 interface Category {
   id: number;
@@ -76,6 +77,7 @@ const MedicineForm: React.FC<MedicineFormProps> = ({ onSubmit, initialData }) =>
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploading(true);
+    showLoading(initialData ? 'Updating medicine...' : 'Adding new medicine...');
 
     try {
       let imageUrl = formData.image_url;
@@ -107,13 +109,21 @@ const MedicineForm: React.FC<MedicineFormProps> = ({ onSubmit, initialData }) =>
         requires_prescription: Boolean(formData.requires_prescription)
       };
 
-      console.log('Submitting medicine data:', medicineData);
-
       // Submit form with image URL
       await onSubmit(medicineData);
+      
+      closeAlert();
+      showSuccess(
+        initialData ? 'Medicine Updated' : 'Medicine Added', 
+        `${formData.name} has been successfully ${initialData ? 'updated' : 'added'} to the inventory.`
+      );
     } catch (error) {
       console.error('Error submitting form:', error);
-      // You might want to show an error message to the user here
+      closeAlert();
+      showError(
+        'Submission Failed', 
+        `Failed to ${initialData ? 'update' : 'add'} medicine. Please try again.`
+      );
     } finally {
       setUploading(false);
     }

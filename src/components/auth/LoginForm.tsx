@@ -5,6 +5,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { loginSchema, type LoginFormData } from '../../types/auth';
 import { UserRound } from 'lucide-react';
+import { showErrorAlert, showSuccessAlert, showFormValidationAlert } from '../../utils/alerts';
 
 const LoginForm = () => {
   const { login } = useAuth();
@@ -19,12 +20,22 @@ const LoginForm = () => {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
+      // Show form validation errors if any
+      if (Object.keys(errors).length > 0) {
+        const formattedErrors: Record<string, string> = {};
+        Object.entries(errors).forEach(([key, value]) => {
+          formattedErrors[key] = value.message as string;
+        });
+        showFormValidationAlert(formattedErrors);
+        return;
+      }
+
       await login(data);
+      showSuccessAlert('Login Successful', 'Welcome back!');
       // Navigation will be handled by the AuthContext
     } catch (error) {
       console.error('Login failed:', error);
-      // Display an error message to the user
-      alert('Login failed. Please check your credentials and try again.');
+      showErrorAlert('Login Failed', 'Please check your credentials and try again.');
     }
   };
 

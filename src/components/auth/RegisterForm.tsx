@@ -1,35 +1,48 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { registerSchema, type RegisterFormData } from '../../types/auth';
-import { UserPlus } from 'lucide-react';
+import { UserRound } from 'lucide-react';
+import { showErrorAlert, showSuccessAlert, showFormValidationAlert } from '../../utils/alerts';
 
 const RegisterForm = () => {
   const { register: registerUser } = useAuth();
-  const navigate = useNavigate();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    reset,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
+      // Show form validation errors if any
+      if (Object.keys(errors).length > 0) {
+        const formattedErrors: Record<string, string> = {};
+        Object.entries(errors).forEach(([key, value]) => {
+          formattedErrors[key] = value.message as string;
+        });
+        showFormValidationAlert(formattedErrors);
+        return;
+      }
+
       await registerUser({
         email: data.email,
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName
       });
-      // Navigation will be handled by the AuthContext
+      
+      showSuccessAlert('Registration Successful', 'Your account has been created!');
+      reset();
+      // Navigation handled by AuthContext
     } catch (error) {
       console.error('Registration failed:', error);
-      // Display an error message to the user
-      alert('Registration failed. Please try again with a different email address.');
+      showErrorAlert('Registration Failed', 'An error occurred during registration. Please try again.');
     }
   };
 
@@ -39,7 +52,7 @@ const RegisterForm = () => {
         <div className="text-center">
           <div className="flex justify-center">
             <div className="bg-blue-600 p-3 rounded-full">
-              <UserPlus className="h-12 w-12 text-white" />
+              <UserRound className="h-12 w-12 text-white" />
             </div>
           </div>
           <h1 className="mt-4 text-4xl font-extrabold text-blue-600">DOSE</h1>
@@ -47,16 +60,16 @@ const RegisterForm = () => {
             Create your account
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Already have an account?{' '}
+            Or{' '}
             <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
-              Sign in
+              sign in to your existing account
             </Link>
           </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="rounded-md shadow-sm space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
                   First Name
@@ -72,6 +85,7 @@ const RegisterForm = () => {
                   <p className="mt-1 text-sm text-red-600">{errors.firstName.message}</p>
                 )}
               </div>
+              
               <div>
                 <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
                   Last Name
@@ -98,7 +112,7 @@ const RegisterForm = () => {
                 type="email"
                 {...register('email')}
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Enter your email"
+                placeholder="Email address"
               />
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
@@ -114,7 +128,7 @@ const RegisterForm = () => {
                 type="password"
                 {...register('password')}
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Create a password"
+                placeholder="Password"
               />
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
@@ -130,7 +144,7 @@ const RegisterForm = () => {
                 type="password"
                 {...register('confirmPassword')}
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Confirm your password"
+                placeholder="Confirm password"
               />
               {errors.confirmPassword && (
                 <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>

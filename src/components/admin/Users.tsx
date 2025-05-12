@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { User, Edit, Trash2, Search } from 'lucide-react';
+import { showConfirmation, showSuccess, showError, showLoading, closeAlert } from '../../utils/swalUtil';
 
 interface UserData {
   id: number;
@@ -36,17 +37,28 @@ const Users = () => {
   };
 
   const handleDelete = async (userId: number) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    const result = await showConfirmation(
+      'Delete User',
+      'Are you sure you want to delete this user? This action cannot be undone.',
+      'Delete',
+      'Cancel'
+    );
 
-    try {
-      await axios.delete(`/api/admin/users/${userId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      setUsers(users.filter(user => user.id !== userId));
-    } catch (err) {
-      setError('Failed to delete user');
+    if (result.isConfirmed) {
+      showLoading('Deleting user...');
+      try {
+        await axios.delete(`/api/admin/users/${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        closeAlert();
+        setUsers(users.filter(user => user.id !== userId));
+        showSuccess('Success', 'User has been deleted successfully');
+      } catch (err) {
+        closeAlert();
+        showError('Error', 'Failed to delete user');
+      }
     }
   };
 

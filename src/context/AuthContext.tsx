@@ -3,6 +3,7 @@ import { jwtDecode } from 'jwt-decode';
 import { User, AuthResponse, LoginCredentials, RegisterData } from '../types';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { showErrorAlert } from '../utils/alerts';
 
 interface AuthContextType {
   user: User | null;
@@ -49,6 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
           setIsAuthenticated(false);
           navigate('/login');
+          showErrorAlert('Session Expired', 'Please log in again');
         }
       }
     };
@@ -90,9 +92,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           navigate('/shop', { replace: true });
         }
       }, 100);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
-      throw new Error('Login failed');
+      const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
+      showErrorAlert('Authentication Error', errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
@@ -113,9 +117,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setTimeout(() => {
         navigate('/shop', { replace: true });
       }, 100);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error);
-      throw new Error('Registration failed');
+      const errorMessage = error.response?.data?.message || 'Registration failed. This email may already be in use.';
+      showErrorAlert('Registration Error', errorMessage);
+      throw new Error(errorMessage);
     }
   };
 

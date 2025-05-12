@@ -11,6 +11,7 @@ import {
   ArrowUp,
   ArrowDown
 } from 'lucide-react';
+import { showLoading, closeAlert, showError } from '../utils/swalUtil';
 
 interface DashboardStat {
   title: string;
@@ -50,6 +51,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      showLoading('Loading dashboard data...');
       try {
         const token = localStorage.getItem('token');
         if (!token) {
@@ -64,10 +66,13 @@ const AdminDashboard = () => {
         
         setDashboardData(response.data);
         setLoading(false);
+        closeAlert();
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         setError('Failed to load dashboard data. Please try again later.');
         setLoading(false);
+        closeAlert();
+        showError('Dashboard Error', 'Failed to load dashboard data. Please try again later.');
       }
     };
 

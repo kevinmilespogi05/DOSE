@@ -1,0 +1,273 @@
+{
+	"info": {
+	  "_postman_id": "9c7f10c2-5be4-4b8d-9bb4-4a08fd5e3f6c",
+	  "name": "Pharmacy Management System API",
+	  "description": "Simplified API collection for the Pharmacy Management System",
+	  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+	  {
+		"name": "Authentication",
+		"item": [
+		  {
+			"name": "Login - Regular User",
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n    \"email\": \"kevin@gmail.com\",\n    \"password\": \"123456\"\n}"
+			  },
+			  "url": {
+				"raw": "http://localhost:3000/api/auth/login",
+				"protocol": "http",
+				"host": ["localhost"],
+				"port": "3000",
+				"path": ["api", "auth", "login"]
+			  },
+			  "description": "Login with regular user account"
+			},
+			"response": [],
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "type": "text/javascript",
+				  "exec": [
+					"if (pm.response.code === 200) {",
+					"    const responseJson = pm.response.json();",
+					"    if (responseJson.token) {",
+					"        pm.environment.set('token', responseJson.token);",
+					"        console.log('User token saved');",
+					"    }",
+					"}"
+				  ]
+				}
+			  }
+			]
+		  },
+		  {
+			"name": "Login - Admin",
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n    \"email\": \"admin@gmail.com\",\n    \"password\": \"admin123\"\n}"
+			  },
+			  "url": {
+				"raw": "http://localhost:3000/api/auth/login",
+				"protocol": "http",
+				"host": ["localhost"],
+				"port": "3000",
+				"path": ["api", "auth", "login"]
+			  },
+			  "description": "Login with admin account"
+			},
+			"response": [],
+			"event": [
+			  {
+				"listen": "test",
+				"script": {
+				  "type": "text/javascript",
+				  "exec": [
+					"if (pm.response.code === 200) {",
+					"    const responseJson = pm.response.json();",
+					"    if (responseJson.token) {",
+					"        pm.environment.set('adminToken', responseJson.token);",
+					"        console.log('Admin token saved');",
+					"    }",
+					"}"
+				  ]
+				}
+			  }
+			]
+		  }
+		],
+		"description": "Authentication endpoints for user management"
+	  },
+	  {
+		"name": "Medicines",
+		"item": [
+		  {
+			"name": "Get All Medicines",
+			"request": {
+			  "method": "GET",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{token}}"
+				}
+			  ],
+			  "url": {
+				"raw": "http://localhost:3000/api/medicines?page=1&limit=10",
+				"protocol": "http",
+				"host": ["localhost"],
+				"port": "3000",
+				"path": ["api", "medicines"],
+				"query": [
+				  { "key": "page", "value": "1" },
+				  { "key": "limit", "value": "10" }
+				]
+			  },
+			  "description": "Get a paginated list of all medicines"
+			},
+			"response": []
+		  },
+		  {
+			"name": "Get Medicine by ID",
+			"request": {
+			  "method": "GET",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{token}}"
+				}
+			  ],
+			  "url": {
+				"raw": "http://localhost:3000/api/medicines/1",
+				"protocol": "http",
+				"host": ["localhost"],
+				"port": "3000",
+				"path": ["api", "medicines", "1"]
+			  },
+			  "description": "Get detailed information about a specific medicine"
+			},
+			"response": []
+		  },
+		  {
+			"name": "Create Medicine (Admin)",
+			"request": {
+			  "method": "POST",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{adminToken}}"
+				},
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n    \"name\": \"Paracetamol\",\n    \"generic_name\": \"Acetaminophen\",\n    \"brand\": \"Biogesic\",\n    \"category_id\": 1,\n    \"description\": \"Pain reliever and fever reducer\",\n    \"price\": 5.99,\n    \"stock_quantity\": 100,\n    \"unit\": \"tablet\",\n    \"supplier_id\": 1,\n    \"requires_prescription\": false\n}"
+			  },
+			  "url": {
+				"raw": "http://localhost:3000/api/medicines",
+				"protocol": "http",
+				"host": ["localhost"],
+				"port": "3000",
+				"path": ["api", "medicines"]
+			  },
+			  "description": "Add a new medicine to the inventory (requires admin)"
+			},
+			"response": []
+		  },
+		  {
+			"name": "Update Medicine (Admin)",
+			"request": {
+			  "method": "PUT",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{adminToken}}"
+				},
+				{
+				  "key": "Content-Type",
+				  "value": "application/json"
+				}
+			  ],
+			  "body": {
+				"mode": "raw",
+				"raw": "{\n    \"name\": \"Paracetamol Extra\",\n    \"generic_name\": \"Acetaminophen\",\n    \"brand\": \"Biogesic\",\n    \"description\": \"Enhanced pain reliever and fever reducer\",\n    \"price\": 6.99,\n    \"stock_quantity\": 150,\n    \"unit\": \"tablet\"\n}"
+			  },
+			  "url": {
+				"raw": "http://localhost:3000/api/medicines/1",
+				"protocol": "http",
+				"host": ["localhost"],
+				"port": "3000",
+				"path": ["api", "medicines", "1"]
+			  },
+			  "description": "Update an existing medicine's information (requires admin)"
+			},
+			"response": []
+		  },
+		  {
+			"name": "Delete Medicine (Admin)",
+			"request": {
+			  "method": "DELETE",
+			  "header": [
+				{
+				  "key": "Authorization",
+				  "value": "Bearer {{adminToken}}"
+				}
+			  ],
+			  "url": {
+				"raw": "http://localhost:3000/api/medicines/1",
+				"protocol": "http",
+				"host": ["localhost"],
+				"port": "3000",
+				"path": ["api", "medicines", "1"]
+			  },
+			  "description": "Remove a medicine from the inventory (requires admin)"
+			},
+			"response": []
+		  }
+		],
+		"description": "Endpoints for medicine management"
+	  }
+	],
+	"event": [
+	  {
+		"listen": "prerequest",
+		"script": {
+		  "type": "text/javascript",
+		  "exec": [""]
+		}
+	  },
+	  {
+		"listen": "test",
+		"script": {
+		  "type": "text/javascript",
+		  "exec": [
+			"// Automatically extract and save the token from login responses",
+			"if (pm.response.code === 200 && pm.request.url.toString().includes('/api/auth/login')) {",
+			"    const responseJson = pm.response.json();",
+			"    if (responseJson.token) {",
+			"        // Determine if user is admin based on response or test name",
+			"        if (pm.info.requestName.includes('Admin') || (responseJson.user && responseJson.user.role === 'admin')) {",
+			"            pm.environment.set('adminToken', responseJson.token);",
+			"            console.log('Admin token saved');",
+			"        } else {",
+			"            pm.environment.set('token', responseJson.token);",
+			"            console.log('User token saved');",
+			"        }",
+			"    }",
+			"}"
+		  ]
+		}
+	  }
+	],
+	"variable": [
+	  {
+		"key": "token",
+		"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsImlhdCI6MTc0NTU1ODQwM30.uDAgt2GPw7EQRz8ck3fOBqKdVscFWi08KFA1MVwFA-0"
+	  },
+	  {
+		"key": "adminToken",
+		"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQsImlhdCI6MTc0NTU1ODg3MX0.xxgFRFRHnsDH6QveOiy8LSRwXwe43MFwKuyXQg1MsWs"
+	  }
+	]
+}
+  
