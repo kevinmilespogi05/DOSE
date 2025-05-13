@@ -8,6 +8,8 @@ import AdminDashboard from './components/AdminDashboard';
 import UserDashboard from './components/UserDashboard';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
+import ForgotPasswordForm from './components/auth/ForgotPasswordForm';
+import ResetPassword from './pages/ResetPassword';
 import Profile from './components/Profile';
 import ProductList from './components/products/ProductList';
 import ProductDetails from './components/products/ProductDetails';
@@ -59,7 +61,7 @@ const PublicRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => 
 function AppContent() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
-  const isAuthPage = ['/login', '/register'].includes(location.pathname);
+  const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname);
 
   return (
     <div className="d-flex flex-column min-vh-100">
@@ -72,6 +74,8 @@ function AppContent() {
               {/* Public Routes */}
               <Route path="/login" element={<PublicRoute element={<LoginForm />} />} />
               <Route path="/register" element={<PublicRoute element={<RegisterForm />} />} />
+              <Route path="/forgot-password" element={<PublicRoute element={<ForgotPasswordForm />} />} />
+              <Route path="/reset-password" element={<PublicRoute element={<ResetPassword />} />} />
               
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminRoute element={<AdminDashboard />} />} />

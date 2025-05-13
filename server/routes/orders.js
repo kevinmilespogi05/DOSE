@@ -1,304 +1,309 @@
 import express from 'express';
-import pool from '../config/database.js';
-import { v4 as uuidv4 } from 'uuid';
+import { body } from 'express-validator';
+import { authenticateToken } from '../middleware/auth';
+import { db } from '../../src/database/connection';
+import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import path from 'path';
 
 const router = express.Router();
 
-// Create a new order
-router.post('/', async (req, res) => {
-  let connection;
+// Place order
+router.post('/', [
+  authenticateToken,
+  body('items').isArray(),
+  body('items.*.product_id').isInt(),
+  body('items.*.quantity').isInt({ min: 1 }),
+  body('shipping_address').isString(),
+  body('payment_method').isString()
+], async (req, res) => {
   try {
-    console.log('Received order request:', req.body);
-
-    // Get connection from pool
-    connection = await pool.getConnection();
-    console.log('Database connection established');
-
-    const { items, total_amount, user_id } = req.body;
-
-    // Validate required fields
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        error: 'Invalid items',
-        details: 'Items array is required and must not be empty'
-      });
-    }
-
-    if (!total_amount || isNaN(total_amount) || total_amount <= 0) {
-      return res.status(400).json({
-        error: 'Invalid total amount',
-        details: 'Total amount must be a positive number'
-      });
-    }
-
-    if (!user_id || isNaN(user_id)) {
-      return res.status(400).json({
-        error: 'Invalid user ID',
-        details: 'User ID is required and must be a number'
-      });
-    }
-
-    // Validate each item
-    for (const item of items) {
-      if (!item.medicine_id || !item.quantity || !item.price_per_unit) {
-        return res.status(400).json({
-          error: 'Invalid item data',
-          details: 'Each item must have medicine_id, quantity, and price_per_unit'
-        });
-      }
-    }
-
-    // Generate a unique order ID
-    const orderId = uuidv4();
-    console.log('Generated order ID:', orderId);
+    const { items, shipping_address, payment_method } = req.body;
 
     // Start transaction
-    await connection.beginTransaction();
-    console.log('Transaction started');
+    await db.query('START TRANSACTION');
 
-    try {
-      // Insert order
-      const [orderResult] = await connection.execute(
-        'INSERT INTO orders (id, user_id, total_amount, status) VALUES (?, ?, ?, ?)',
-        [orderId, user_id, total_amount, 'pending_payment']
+    // Check stock availability
+    for (const item of items) {
+      const [product] = await db.query(
+        'SELECT stock_quantity FROM products WHERE id = ? FOR UPDATE',
+        [item.product_id]
       );
-      console.log('Order inserted:', orderResult);
 
-      // Insert order items
-      for (const item of items) {
-        const [itemResult] = await connection.execute(
-          'INSERT INTO order_items (order_id, medicine_id, quantity, unit_price) VALUES (?, ?, ?, ?)',
-          [orderId, item.medicine_id, item.quantity, item.price_per_unit]
-        );
-        console.log('Order item inserted:', itemResult);
+      if (!product || product.stock_quantity < item.quantity) {
+        await db.query('ROLLBACK');
+        return res.status(400).json({ error: 'Insufficient stock' });
       }
-
-      // Commit transaction
-      await connection.commit();
-      console.log('Transaction committed successfully');
-
-      res.status(201).json({
-        orderId,
-        message: 'Order created successfully'
-      });
-    } catch (error) {
-      // Rollback transaction on error
-      await connection.rollback();
-      console.error('Error during transaction:', error);
-      throw error;
     }
-  } catch (error) {
-    console.error('Error creating order:', error);
-    
-    res.status(500).json({
-      error: 'Failed to create order',
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+
+    // Calculate total and tax
+    let subtotal = 0;
+    for (const item of items) {
+      const [product] = await db.query(
+        'SELECT price FROM products WHERE id = ?',
+        [item.product_id]
+      );
+      subtotal += product.price * item.quantity;
+    }
+
+    const tax_rate = 0.1; // 10% tax rate
+    const tax = subtotal * tax_rate;
+    const shipping_cost = 10.00; // Fixed shipping cost for now
+    const total = subtotal + tax + shipping_cost;
+
+    // Create order
+    const [orderResult] = await db.query(`
+      INSERT INTO orders (
+        user_id, status, subtotal, tax, shipping_cost, 
+        total, shipping_address, payment_method
+      ) VALUES (?, 'pending', ?, ?, ?, ?, ?, ?)
+    `, [
+      req.user.id, subtotal, tax, shipping_cost,
+      total, shipping_address, payment_method
+    ]);
+
+    const orderId = orderResult.insertId;
+
+    // Create order items and update stock
+    for (const item of items) {
+      const [product] = await db.query(
+        'SELECT price FROM products WHERE id = ?',
+        [item.product_id]
+      );
+
+      await db.query(`
+        INSERT INTO order_items (
+          order_id, product_id, quantity, price
+        ) VALUES (?, ?, ?, ?)
+      `, [orderId, item.product_id, item.quantity, product.price]);
+
+      await db.query(`
+        UPDATE products 
+        SET stock_quantity = stock_quantity - ?
+        WHERE id = ?
+      `, [item.quantity, item.product_id]);
+    }
+
+    await db.query('COMMIT');
+
+    // Generate invoice
+    await generateInvoice(orderId);
+
+    res.json({
+      message: 'Order placed successfully',
+      order_id: orderId,
+      total
     });
-  } finally {
-    // Release connection back to pool
-    if (connection) {
-      try {
-        await connection.release();
-        console.log('Connection released back to pool');
-      } catch (releaseError) {
-        console.error('Error releasing connection:', releaseError);
-      }
-    }
+  } catch (error) {
+    await db.query('ROLLBACK');
+    res.status(500).json({ error: 'Failed to place order' });
   }
 });
 
-// Update order status
-router.put('/:orderId/status', async (req, res) => {
-  const connection = await pool.getConnection();
-  
+// Get order history
+router.get('/history', authenticateToken, async (req, res) => {
   try {
-    const { orderId } = req.params;
-    const { status } = req.body;
+    const orders = await db.query(`
+      SELECT 
+        o.*,
+        JSON_ARRAYAGG(
+          JSON_OBJECT(
+            'product_id', oi.product_id,
+            'product_name', p.name,
+            'quantity', oi.quantity,
+            'price', oi.price
+          )
+        ) as items
+      FROM orders o
+      JOIN order_items oi ON o.id = oi.order_id
+      JOIN products p ON oi.product_id = p.id
+      WHERE o.user_id = ?
+      GROUP BY o.id
+      ORDER BY o.created_at DESC
+    `, [req.user.id]);
 
-    const [result] = await connection.execute(
-      'UPDATE orders SET status = ? WHERE id = ?',
-      [status, orderId]
-    );
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch order history' });
+  }
+});
 
-    if (result.affectedRows === 0) {
+// Track order
+router.get('/:orderId/track', authenticateToken, async (req, res) => {
+  try {
+    const [order] = await db.query(`
+      SELECT 
+        o.*,
+        JSON_ARRAYAGG(
+          JSON_OBJECT(
+            'product_id', oi.product_id,
+            'product_name', p.name,
+            'quantity', oi.quantity,
+            'price', oi.price
+          )
+        ) as items
+      FROM orders o
+      JOIN order_items oi ON o.id = oi.order_id
+      JOIN products p ON oi.product_id = p.id
+      WHERE o.id = ? AND o.user_id = ?
+      GROUP BY o.id
+    `, [req.params.orderId, req.user.id]);
+
+    if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    res.json({ message: 'Order status updated successfully' });
+    res.json(order);
   } catch (error) {
-    console.error('Error updating order status:', error);
-    res.status(500).json({
-      error: 'Failed to update order status',
-      details: error.message
-    });
-  } finally {
-    connection.release();
+    res.status(500).json({ error: 'Failed to track order' });
   }
 });
 
-// Get order history for the authenticated user
-router.get('/history', async (req, res) => {
-  let connection;
+// Cancel order
+router.post('/:orderId/cancel', authenticateToken, async (req, res) => {
   try {
-    // Check if user is authenticated
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        details: 'User ID not found in request'
-      });
+    await db.query('START TRANSACTION');
+
+    const [order] = await db.query(
+      'SELECT status FROM orders WHERE id = ? AND user_id = ? FOR UPDATE',
+      [req.params.orderId, req.user.id]
+    );
+
+    if (!order) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({ error: 'Order not found' });
     }
 
-    const userId = req.user.id;
-    console.log('Fetching order history for user:', userId);
+    if (order.status !== 'pending') {
+      await db.query('ROLLBACK');
+      return res.status(400).json({ error: 'Order cannot be cancelled' });
+    }
 
-    connection = await pool.getConnection();
+    // Restore stock
+    const orderItems = await db.query(
+      'SELECT product_id, quantity FROM order_items WHERE order_id = ?',
+      [req.params.orderId]
+    );
 
-    // Get orders with their items
-    const [orders] = await connection.execute(`
-      SELECT 
-        o.id,
-        o.total_amount,
-        o.status,
-        o.created_at,
-        oi.medicine_id,
-        oi.quantity,
-        oi.unit_price,
-        m.name as medicine_name
-      FROM orders o
-      LEFT JOIN order_items oi ON o.id = oi.order_id
-      LEFT JOIN medicines m ON oi.medicine_id = m.id
-      WHERE o.user_id = ?
-      ORDER BY o.created_at DESC
-    `, [userId]);
+    for (const item of orderItems) {
+      await db.query(`
+        UPDATE products 
+        SET stock_quantity = stock_quantity + ?
+        WHERE id = ?
+      `, [item.quantity, item.product_id]);
+    }
 
-    console.log('Found orders:', orders.length);
+    // Update order status
+    await db.query(
+      'UPDATE orders SET status = "cancelled" WHERE id = ?',
+      [req.params.orderId]
+    );
 
-    // Group orders and their items
-    const groupedOrders = orders.reduce((acc, row) => {
-      if (!acc[row.id]) {
-        acc[row.id] = {
-          id: row.id,
-          total_amount: row.total_amount,
-          status: row.status,
-          created_at: row.created_at,
-          items: []
-        };
-      }
-      
-      if (row.medicine_id) {
-        acc[row.id].items.push({
-          medicine_id: row.medicine_id,
-          quantity: row.quantity,
-          unit_price: row.unit_price,
-          medicine_name: row.medicine_name
-        });
-      }
-      
-      return acc;
-    }, {});
-
-    res.json(Object.values(groupedOrders));
+    await db.query('COMMIT');
+    res.json({ message: 'Order cancelled successfully' });
   } catch (error) {
-    console.error('Error fetching order history:', error);
-    res.status(500).json({
-      error: 'Failed to fetch order history',
-      details: error.message
-    });
-  } finally {
-    if (connection) {
-      try {
-        await connection.release();
-      } catch (releaseError) {
-        console.error('Error releasing connection:', releaseError);
-      }
-    }
+    await db.query('ROLLBACK');
+    res.status(500).json({ error: 'Failed to cancel order' });
   }
 });
 
-// Get all orders (admin only)
-router.get('/admin/orders', async (req, res) => {
-  let connection;
+// Request refund
+router.post('/:orderId/refund', [
+  authenticateToken,
+  body('reason').isString()
+], async (req, res) => {
   try {
-    // Check if user is authenticated and is admin
-    if (!req.user || !req.user.id || !req.user.is_admin) {
-      return res.status(403).json({
-        error: 'Forbidden',
-        details: 'Admin access required'
-      });
+    const { reason } = req.body;
+
+    await db.query('START TRANSACTION');
+
+    const [order] = await db.query(
+      'SELECT status FROM orders WHERE id = ? AND user_id = ? FOR UPDATE',
+      [req.params.orderId, req.user.id]
+    );
+
+    if (!order) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({ error: 'Order not found' });
     }
 
-    connection = await pool.getConnection();
+    if (order.status !== 'completed') {
+      await db.query('ROLLBACK');
+      return res.status(400).json({ error: 'Order is not eligible for refund' });
+    }
 
-    // Get all orders with their items and user information
-    const [orders] = await connection.execute(`
-      SELECT 
-        o.id,
-        o.user_id,
-        o.total_amount,
-        o.status,
-        o.created_at,
-        o.updated_at,
-        u.name as user_name,
-        u.email as user_email,
-        oi.medicine_id,
-        oi.quantity,
-        oi.unit_price,
-        m.name as medicine_name
-      FROM orders o
-      LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN order_items oi ON o.id = oi.order_id
-      LEFT JOIN medicines m ON oi.medicine_id = m.id
-      ORDER BY o.created_at DESC
-    `);
+    // Create refund request
+    await db.query(`
+      INSERT INTO refunds (
+        order_id, reason, status
+      ) VALUES (?, ?, 'pending')
+    `, [req.params.orderId, reason]);
 
-    // Group orders and their items
-    const groupedOrders = orders.reduce((acc, row) => {
-      if (!acc[row.id]) {
-        acc[row.id] = {
-          id: row.id,
-          user_id: row.user_id,
-          total_amount: row.total_amount,
-          status: row.status,
-          created_at: row.created_at,
-          updated_at: row.updated_at,
-          user: {
-            id: row.user_id,
-            name: row.user_name,
-            email: row.user_email
-          },
-          items: []
-        };
-      }
-      
-      if (row.medicine_id) {
-        acc[row.id].items.push({
-          medicine_id: row.medicine_id,
-          quantity: row.quantity,
-          unit_price: row.unit_price,
-          medicine_name: row.medicine_name
-        });
-      }
-      
-      return acc;
-    }, {});
+    // Update order status
+    await db.query(
+      'UPDATE orders SET status = "refund_requested" WHERE id = ?',
+      [req.params.orderId]
+    );
 
-    res.json(Object.values(groupedOrders));
+    await db.query('COMMIT');
+    res.json({ message: 'Refund requested successfully' });
   } catch (error) {
-    console.error('Error fetching admin orders:', error);
-    res.status(500).json({
-      error: 'Failed to fetch orders',
-      details: error.message
-    });
-  } finally {
-    if (connection) {
-      try {
-        await connection.release();
-      } catch (releaseError) {
-        console.error('Error releasing connection:', releaseError);
-      }
-    }
+    await db.query('ROLLBACK');
+    res.status(500).json({ error: 'Failed to request refund' });
   }
 });
+
+// Generate invoice
+async function generateInvoice(orderId) {
+  try {
+    const [order] = await db.query(`
+      SELECT 
+        o.*,
+        u.name as customer_name,
+        u.email as customer_email
+      FROM orders o
+      JOIN users u ON o.user_id = u.id
+      WHERE o.id = ?
+    `, [orderId]);
+
+    const orderItems = await db.query(`
+      SELECT 
+        oi.*,
+        p.name as product_name
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.id
+      WHERE oi.order_id = ?
+    `, [orderId]);
+
+    const doc = new PDFDocument();
+    const invoicePath = path.join(__dirname, '../../public/invoices', `invoice-${orderId}.pdf`);
+    doc.pipe(fs.createWriteStream(invoicePath));
+
+    // Add invoice content
+    doc.fontSize(25).text('Invoice', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Order #: ${orderId}`);
+    doc.text(`Date: ${new Date(order.created_at).toLocaleDateString()}`);
+    doc.text(`Customer: ${order.customer_name}`);
+    doc.text(`Email: ${order.customer_email}`);
+    doc.moveDown();
+
+    // Add items
+    doc.text('Items:', { underline: true });
+    orderItems.forEach(item => {
+      doc.text(`${item.product_name} x ${item.quantity} @ $${item.price}`);
+    });
+
+    doc.moveDown();
+    doc.text(`Subtotal: $${order.subtotal}`);
+    doc.text(`Tax: $${order.tax}`);
+    doc.text(`Shipping: $${order.shipping_cost}`);
+    doc.text(`Total: $${order.total}`, { bold: true });
+
+    doc.end();
+  } catch (error) {
+    console.error('Failed to generate invoice:', error);
+  }
+}
 
 export default router; 

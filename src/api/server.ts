@@ -10,6 +10,7 @@ import { RowDataPacket, Connection } from 'mysql2/promise';
 import path from 'path';
 import paymongoRoutes from './routes/paymongo';
 import prescriptionRoutes from './routes/prescriptions';
+import authRoutes from './routes/auth';
 import { v4 as uuidv4 } from 'uuid';
 
 // Initialize admin user
@@ -67,6 +68,11 @@ app.use(express.json());
 
 // Serve static files from public directory
 app.use(express.static('public'));
+
+// Mount routes
+app.use('/api/auth', authRoutes);
+app.use('/api/paymongo', paymongoRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
 
 // In-memory storage (replace with a proper database in production)
 const users: any[] = [];
@@ -1500,10 +1506,6 @@ app.get('/api/admin/dashboard', authenticateToken, isAdmin, async (req, res) => 
     res.status(500).json({ message: 'Error fetching dashboard data' });
   }
 });
-
-// Use route modules
-app.use('/api/paymongo', paymongoRoutes);
-app.use('/api/prescriptions', prescriptionRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
