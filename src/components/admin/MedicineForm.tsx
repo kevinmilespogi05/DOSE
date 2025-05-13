@@ -32,6 +32,7 @@ const MedicineForm: React.FC<MedicineFormProps> = ({ onSubmit, initialData }) =>
     requires_prescription: false,
     min_stock_level: 10,
     max_stock_level: 100,
+    reorder_point: 20,
     expiry_date: '',
     box_quantity: '',
     price_per_box: ''
@@ -290,6 +291,40 @@ const MedicineForm: React.FC<MedicineFormProps> = ({ onSubmit, initialData }) =>
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700">Stock Status</label>
+            <div className={`mt-1 px-3 py-2 rounded-md ${
+              parseInt(formData.stock_quantity) === 0
+                ? 'bg-red-100 text-red-800'
+                : parseInt(formData.stock_quantity) <= parseInt(formData.min_stock_level)
+                ? 'bg-yellow-100 text-yellow-800'
+                : 'bg-green-100 text-green-800'
+            }`}>
+              <div className="flex items-center">
+                <div className={`w-2 h-2 rounded-full mr-2 ${
+                  parseInt(formData.stock_quantity) === 0
+                    ? 'bg-red-500'
+                    : parseInt(formData.stock_quantity) <= parseInt(formData.min_stock_level)
+                    ? 'bg-yellow-500'
+                    : 'bg-green-500'
+                }`}></div>
+                {parseInt(formData.stock_quantity) === 0
+                  ? 'Out of Stock'
+                  : parseInt(formData.stock_quantity) <= parseInt(formData.min_stock_level)
+                  ? `Low Stock (Below ${formData.min_stock_level} ${formData.unit})`
+                  : 'In Stock'}
+              </div>
+              <div className="text-sm mt-1">
+                Current Stock: {formData.stock_quantity} {formData.unit}
+                {parseInt(formData.stock_quantity) <= parseInt(formData.reorder_point) && (
+                  <span className="text-amber-600 ml-2">
+                    • Reorder Point Reached
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700">Unit</label>
             <select
               value={formData.unit}
@@ -319,7 +354,7 @@ const MedicineForm: React.FC<MedicineFormProps> = ({ onSubmit, initialData }) =>
         </div>
 
         {/* Stock Management */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Minimum Stock Level</label>
             <input
@@ -338,6 +373,17 @@ const MedicineForm: React.FC<MedicineFormProps> = ({ onSubmit, initialData }) =>
               onChange={(e) => setFormData({ ...formData, max_stock_level: e.target.value })}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Reorder Point</label>
+            <input
+              type="number"
+              value={formData.reorder_point}
+              onChange={(e) => setFormData({ ...formData, reorder_point: e.target.value })}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            />
+            <p className="mt-1 text-sm text-gray-500">Stock level at which to reorder</p>
           </div>
         </div>
 

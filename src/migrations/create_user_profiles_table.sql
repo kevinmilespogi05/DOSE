@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL UNIQUE,
+  first_name VARCHAR(255),
+  last_name VARCHAR(255),
+  phone_number VARCHAR(20),
+  address TEXT,
+  city VARCHAR(100),
+  state_province VARCHAR(100),
+  country VARCHAR(100),
+  postal_code VARCHAR(20),
+  bio TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+); 

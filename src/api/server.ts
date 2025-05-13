@@ -14,6 +14,7 @@ import authRoutes from './routes/auth';
 import mfaRoutes from './routes/mfa';
 import { v4 as uuidv4 } from 'uuid';
 import userRoutes from './routes/users';
+import UserProfileService from '../services/userProfileService';
 
 // Initialize admin user
 async function initializeAdmin() {
@@ -100,7 +101,11 @@ const authenticateToken = (req: any, res: any, next: any) => {
 
   jwt.verify(token, CONFIG.JWT_SECRET, (err: any, user: any) => {
     if (err) return res.sendStatus(403);
-    req.user = user;
+    req.user = {
+      id: user.userId,
+      email: user.email,
+      role: user.role
+    };
     next();
   });
 };
@@ -110,7 +115,7 @@ const isAdmin = async (req: any, res: any, next: any) => {
   try {
     const users = await query(
       'SELECT role FROM users WHERE id = ?',
-      [req.user.userId]
+      [req.user.id]
     );
 
     if (users.length === 0 || users[0].role !== 'admin') {
@@ -341,47 +346,36 @@ app.post('/api/products', authenticateToken, (req: any, res) => {
 // Add medicines routes
 app.get('/api/medicines', authenticateToken, async (req: any, res) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const sortBy = req.query.sortBy as string;
-    const sortOrder = (req.query.sortOrder as string)?.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-
-    const allowedSortFields = [
-      'name',
-      'generic_name',
-      'brand',
-      'price',
-      'stock_quantity',
-      'created_at'
-    ];
-
-    const baseSql = `
-      SELECT 
+    const medicines = await query(
+      `SELECT 
         m.id,
         m.name,
         m.generic_name,
         m.brand,
+        m.description,
         CAST(m.price AS DECIMAL(10,2)) as price,
         m.stock_quantity,
         m.unit,
         m.image_url,
         m.requires_prescription,
+        m.min_stock_level,
+        m.max_stock_level,
+        m.reorder_point,
+        CASE 
+          WHEN m.stock_quantity = 0 THEN 'out_of_stock'
+          WHEN m.stock_quantity <= m.min_stock_level THEN 'low_stock'
+          ELSE 'in_stock'
+        END as stock_status,
         mc.name as category_name,
-        s.name as supplier_name,
-        m.created_at
-      FROM medicines m 
-      LEFT JOIN medicine_categories mc ON m.category_id = mc.id
-      LEFT JOIN suppliers s ON m.supplier_id = s.id
-    `;
-
-    const result = await queryPaginated(
-      baseSql,
-      { page, limit, sortBy, sortOrder },
-      [],
-      allowedSortFields
+        s.name as supplier_name
+       FROM medicines m 
+       LEFT JOIN medicine_categories mc ON m.category_id = mc.id
+       LEFT JOIN suppliers s ON m.supplier_id = s.id
+       ORDER BY m.name ASC`,
+      []
     );
 
-    res.json(result);
+    res.json(medicines);
   } catch (error) {
     console.error('Error fetching medicines:', error);
     res.status(500).json({ message: 'Error fetching medicines' });
@@ -403,6 +397,14 @@ app.get('/api/medicines/:id', authenticateToken, async (req: any, res) => {
         m.unit,
         m.image_url,
         m.requires_prescription,
+        m.min_stock_level,
+        m.max_stock_level,
+        m.reorder_point,
+        CASE 
+          WHEN m.stock_quantity = 0 THEN 'out_of_stock'
+          WHEN m.stock_quantity <= m.min_stock_level THEN 'low_stock'
+          ELSE 'in_stock'
+        END as stock_status,
         mc.name as category_name,
         s.name as supplier_name
        FROM medicines m 
@@ -594,22 +596,39 @@ app.post('/api/medicines', authenticateToken, isAdmin, async (req: any, res) => 
 // Add user profile endpoint
 app.get('/api/user/profile', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.userId;
-    const users = await query(
-      `SELECT id, username, email, role, created_at 
-       FROM users WHERE id = ?`,
-      [userId]
-    );
-
-    if (users.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'User not authenticated' });
     }
 
-    const user = users[0];
-    res.json(user);
+    const profile = await UserProfileService.getProfile(req.user.id);
+    if (!profile) {
+      await UserProfileService.ensureProfileExists(req.user.id);
+      const newProfile = await UserProfileService.getProfile(req.user.id);
+      return res.json(newProfile);
+    }
+    res.json(profile);
   } catch (error) {
     console.error('Error fetching user profile:', error);
     res.status(500).json({ message: 'Error fetching user profile' });
+  }
+});
+
+// Add PUT endpoint for updating user profile
+app.put('/api/user/profile', authenticateToken, async (req: any, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    const profileData = req.body;
+    await UserProfileService.ensureProfileExists(req.user.id);
+    await UserProfileService.updateProfile(req.user.id, profileData);
+
+    const updatedProfile = await UserProfileService.getProfile(req.user.id);
+    res.json(updatedProfile);
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ message: 'Error updating user profile' });
   }
 });
 
@@ -619,13 +638,13 @@ app.get('/api/cart', authenticateToken, async (req: any, res) => {
     // Get or create cart for user
     let cart = await query(
       'SELECT id FROM cart WHERE user_id = ?',
-      [req.user.userId]
+      [req.user.id]
     );
 
     if (cart.length === 0) {
       const result = await execute(
         'INSERT INTO cart (user_id) VALUES (?)',
-        [req.user.userId]
+        [req.user.id]
       );
       cart = await query(
         'SELECT id FROM cart WHERE id = ?',
@@ -662,7 +681,7 @@ app.delete('/api/cart/clear', authenticateToken, async (req: any, res) => {
     // Get cart for user
     const cart = await query(
       'SELECT id FROM cart WHERE user_id = ?',
-      [req.user.userId]
+      [req.user.id]
     );
 
     if (cart.length === 0) {
@@ -689,13 +708,13 @@ app.post('/api/cart/items', authenticateToken, async (req: any, res) => {
     // Get or create cart
     let cart = await query(
       'SELECT id FROM cart WHERE user_id = ?',
-      [req.user.userId]
+      [req.user.id]
     );
 
     if (cart.length === 0) {
       const result = await execute(
         'INSERT INTO cart (user_id) VALUES (?)',
-        [req.user.userId]
+        [req.user.id]
       );
       cart = await query(
         'SELECT id FROM cart WHERE id = ?',
@@ -741,7 +760,7 @@ app.put('/api/cart/items/:id', authenticateToken, async (req: any, res) => {
        FROM cart_items ci
        JOIN cart c ON ci.cart_id = c.id
        WHERE ci.id = ? AND c.user_id = ?`,
-      [itemId, req.user.userId]
+      [itemId, req.user.id]
     );
 
     if (cartItem.length === 0) {
@@ -770,7 +789,7 @@ app.delete('/api/cart/items/:id', authenticateToken, async (req: any, res) => {
        FROM cart_items ci
        JOIN cart c ON ci.cart_id = c.id
        WHERE ci.id = ? AND c.user_id = ?`,
-      [itemId, req.user.userId]
+      [itemId, req.user.id]
     );
 
     if (cartItem.length === 0) {
@@ -1215,7 +1234,7 @@ app.use('/api/payments', paymongoRoutes);
 // Order history endpoint
 app.get('/api/orders/history', authenticateToken, async (req: any, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     
     // First get the orders
     const orders = await query(

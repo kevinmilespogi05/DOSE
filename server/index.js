@@ -6,7 +6,7 @@ import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import pool from './config/database.js';
 import mfaRoutes from './routes/mfa.js';
-import userProfileRoutes from './routes/userProfile.js';
+import { authenticateToken } from './middleware/auth.js';
 
 // Load environment variables first
 dotenv.config();
@@ -43,12 +43,12 @@ const initializeServer = async () => {
     const chatRoutes = await import('./routes/chat.js');
     const orderRoutes = await import('./routes/orders.js');
     const paymentRoutes = await import('./routes/payments.js');
-    const { authenticateToken } = await import('./middleware/auth.js');
+    const userProfileRoutes = await import('./routes/userProfile.js');
 
     // Routes
     app.use('/api/auth', authRoutes.default);
     app.use('/api/mfa', mfaRoutes);
-    app.use('/api/users', userProfileRoutes);
+    app.use('/api/user-profile', authenticateToken, userProfileRoutes.default);
     app.use('/api/cars', authenticateToken, carRoutes.default);
     app.use('/api/bookings', authenticateToken, bookingRoutes.default);
     app.use('/api/chat', authenticateToken, chatRoutes.default);
@@ -56,7 +56,8 @@ const initializeServer = async () => {
     app.use('/api/payments', authenticateToken, paymentRoutes.default);
 
     // Serve uploaded files
-    app.use('/uploads', express.static('uploads'));
+    app.use('/uploads', express.static('public/uploads'));
+    app.use(express.static('public'));
 
     // Socket.IO connection handling
     io.on('connection', (socket) => {

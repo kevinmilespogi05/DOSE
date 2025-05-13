@@ -23,6 +23,10 @@ interface Medicine {
   image_url: string;
   box_quantity: number;
   price_per_box: string | number;
+  min_stock_level: number;
+  max_stock_level: number;
+  reorder_point: number;
+  stock_status: 'in_stock' | 'low_stock' | 'out_of_stock';
 }
 
 const ProductDetails = () => {
@@ -160,9 +164,36 @@ const ProductDetails = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-3xl font-bold text-gray-900">{formatPeso(medicine.price)}</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Stock: {medicine.stock_quantity} {medicine.unit}
-                </p>
+                <div className="mt-2 flex items-center space-x-2">
+                  <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
+                    medicine.stock_status === 'out_of_stock'
+                      ? 'bg-red-100 text-red-800'
+                      : medicine.stock_status === 'low_stock'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    <div className={`w-2 h-2 rounded-full mr-2 ${
+                      medicine.stock_status === 'out_of_stock'
+                        ? 'bg-red-500'
+                        : medicine.stock_status === 'low_stock'
+                        ? 'bg-yellow-500'
+                        : 'bg-green-500'
+                    }`}></div>
+                    {medicine.stock_status === 'out_of_stock'
+                      ? 'Out of Stock'
+                      : medicine.stock_status === 'low_stock'
+                      ? `Low Stock (Below ${medicine.min_stock_level} ${medicine.unit})`
+                      : 'In Stock'}
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    {medicine.stock_quantity} {medicine.unit} available
+                    {medicine.stock_quantity <= medicine.reorder_point && medicine.stock_quantity > 0 && (
+                      <span className="text-amber-600 ml-2">
+                        • Reorder Point Reached
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
               {medicine.requires_prescription && (
                 <div className="flex items-center text-amber-600">

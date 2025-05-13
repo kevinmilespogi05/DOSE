@@ -30,6 +30,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = localStorage.getItem('token');
       if (token) {
         try {
+          // Decode token to get user info
+          const decoded = jwtDecode(token) as { userId: number; role: string };
+          console.log('Decoded token:', decoded); // For debugging
+
           // Verify token by fetching user profile
           const response = await api.get('/users/profile', {
             headers: {
@@ -37,11 +41,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           });
           
-          setUser(response.data);
+          const userData = {
+            ...response.data,
+            role: decoded.role // Always use role from token
+          };
+
+          console.log('User data:', userData); // For debugging
+          
+          setUser(userData);
           setIsAuthenticated(true);
           
           // Redirect based on role
-          if (response.data.role === 'admin') {
+          if (userData.role === 'admin') {
             navigate('/admin');
           } else {
             navigate('/shop');
@@ -85,7 +96,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
         api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-        setUser(response.data.user);
+        
+        // Decode token to get user info
+        const decoded = jwtDecode(response.data.token) as { userId: number; role: string };
+        console.log('Login decoded token:', decoded); // For debugging
+        
+        const userData = {
+          ...response.data.user,
+          role: decoded.role // Always use role from token
+        };
+        
+        console.log('Login user data:', userData); // For debugging
+        
+        setUser(userData);
         setIsAuthenticated(true);
       }
 

@@ -283,7 +283,7 @@ router.post('/verify-mfa-login',
 
       if (verified) {
         const token = jwt.sign(
-          { id: user.id, email: user.email, role: user.role },
+          { userId: user.id, role: user.role },
           process.env.JWT_SECRET || 'your_jwt_secret',
           { expiresIn: '24h' }
         );
@@ -339,9 +339,15 @@ router.post('/login', async (req, res) => {
 
         // If MFA is not enabled, generate and send token
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
-            process.env.JWT_SECRET || 'your_jwt_secret'
+            { 
+                userId: user.id,
+                role: user.role // Include role in token
+            },
+            CONFIG.JWT_SECRET,
+            { expiresIn: '24h' } // Add token expiration
         );
+
+        console.log('Generated token payload:', { userId: user.id, role: user.role }); // For debugging
 
         res.json({
             token,
@@ -387,7 +393,7 @@ router.post('/verify-mfa', async (req, res) => {
 
         // Generate JWT token
         const jwtToken = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
+            { userId: user.id },
             process.env.JWT_SECRET || 'your_jwt_secret'
         );
 

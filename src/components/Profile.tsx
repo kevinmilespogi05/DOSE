@@ -13,6 +13,7 @@ const Profile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const {
     register,
@@ -26,12 +27,15 @@ const Profile = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await api.get('/users/profile');
+        setIsLoading(true);
+        const response = await api.get('/user/profile');
         setProfile(response.data);
         reset(response.data);
       } catch (error) {
         console.error('Error fetching profile:', error);
         showErrorAlert('Error', 'Failed to fetch profile');
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -40,13 +44,20 @@ const Profile = () => {
 
   const onSubmit = async (data: UserProfileFormData) => {
     try {
-      const response = await api.put('/users/profile', data);
+      const response = await api.put('/user/profile', data);
       setProfile(response.data);
       setIsEditing(false);
       showSuccessAlert('Success', 'Profile updated successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      showErrorAlert('Error', 'Failed to update profile');
+      if (error.response?.data?.errors) {
+        const validationErrors = error.response.data.errors
+          .map((err: any) => err.msg)
+          .join(', ');
+        showErrorAlert('Validation Error', validationErrors);
+      } else {
+        showErrorAlert('Error', 'Failed to update profile');
+      }
     }
   };
 
@@ -74,6 +85,14 @@ const Profile = () => {
       setIsUploading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -134,14 +153,14 @@ const Profile = () => {
           <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 required">
                   First Name
                 </label>
                 <input
                   type="text"
                   {...register('first_name')}
                   disabled={!isEditing}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
                 />
                 {errors.first_name && (
                   <p className="mt-1 text-sm text-red-600">{errors.first_name.message}</p>
@@ -149,14 +168,14 @@ const Profile = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 required">
                   Last Name
                 </label>
                 <input
                   type="text"
                   {...register('last_name')}
                   disabled={!isEditing}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
                 />
                 {errors.last_name && (
                   <p className="mt-1 text-sm text-red-600">{errors.last_name.message}</p>
@@ -164,14 +183,15 @@ const Profile = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 required">
                   Phone Number
                 </label>
                 <input
                   type="tel"
                   {...register('phone_number')}
                   disabled={!isEditing}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  placeholder="+1234567890"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
                 />
                 {errors.phone_number && (
                   <p className="mt-1 text-sm text-red-600">{errors.phone_number.message}</p>
@@ -186,7 +206,7 @@ const Profile = () => {
                   type="date"
                   {...register('date_of_birth')}
                   disabled={!isEditing}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
                 />
                 {errors.date_of_birth && (
                   <p className="mt-1 text-sm text-red-600">{errors.date_of_birth.message}</p>
@@ -200,7 +220,7 @@ const Profile = () => {
                 <select
                   {...register('gender')}
                   disabled={!isEditing}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
                 >
                   <option value="">Select gender</option>
                   <option value="male">Male</option>
@@ -222,7 +242,7 @@ const Profile = () => {
                 type="text"
                 {...register('address')}
                 disabled={!isEditing}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
               />
               {errors.address && (
                 <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
@@ -238,7 +258,7 @@ const Profile = () => {
                   type="text"
                   {...register('city')}
                   disabled={!isEditing}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
                 />
                 {errors.city && (
                   <p className="mt-1 text-sm text-red-600">{errors.city.message}</p>
@@ -251,12 +271,12 @@ const Profile = () => {
                 </label>
                 <input
                   type="text"
-                  {...register('state')}
+                  {...register('state_province')}
                   disabled={!isEditing}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
                 />
-                {errors.state && (
-                  <p className="mt-1 text-sm text-red-600">{errors.state.message}</p>
+                {errors.state_province && (
+                  <p className="mt-1 text-sm text-red-600">{errors.state_province.message}</p>
                 )}
               </div>
 
@@ -268,7 +288,7 @@ const Profile = () => {
                   type="text"
                   {...register('country')}
                   disabled={!isEditing}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
                 />
                 {errors.country && (
                   <p className="mt-1 text-sm text-red-600">{errors.country.message}</p>
@@ -283,7 +303,7 @@ const Profile = () => {
                   type="text"
                   {...register('postal_code')}
                   disabled={!isEditing}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
                 />
                 {errors.postal_code && (
                   <p className="mt-1 text-sm text-red-600">{errors.postal_code.message}</p>
@@ -299,7 +319,7 @@ const Profile = () => {
                 {...register('bio')}
                 disabled={!isEditing}
                 rows={4}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
               />
               {errors.bio && (
                 <p className="mt-1 text-sm text-red-600">{errors.bio.message}</p>

@@ -55,7 +55,7 @@ router.post('/upload', authenticateToken, upload.single('prescription'), async (
       `INSERT INTO prescriptions 
        (user_id, image_url, status, notes) 
        VALUES (?, ?, ?, ?)`,
-      [req.user.userId, imageUrl, 'pending', '']
+      [req.user.id, imageUrl, 'pending', '']
     );
 
     res.status(201).json({ 
@@ -77,7 +77,7 @@ router.get('/user', authenticateToken, async (req: any, res) => {
        FROM prescriptions p 
        WHERE p.user_id = ? 
        ORDER BY p.created_at DESC`,
-      [req.user.userId]
+      [req.user.id]
     );
     
     res.json(prescriptions);
@@ -106,7 +106,7 @@ router.get('/:id', authenticateToken, async (req: any, res) => {
     const prescription = prescriptions[0];
     
     // Verify user is authorized to view this prescription
-    if (prescription.user_id !== req.user.userId && req.user.role !== 'admin') {
+    if (prescription.user_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Unauthorized' });
     }
     

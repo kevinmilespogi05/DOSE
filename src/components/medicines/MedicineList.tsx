@@ -17,6 +17,10 @@ interface Medicine {
   unit: string;
   supplier_name: string;
   requires_prescription: boolean;
+  min_stock_level: number;
+  max_stock_level: number;
+  reorder_point: number;
+  stock_status: 'in_stock' | 'low_stock' | 'out_of_stock';
 }
 
 interface PaginatedResponse {
@@ -47,7 +51,8 @@ const MedicineList = () => {
 
   const fetchMedicines = async () => {
     try {
-      const response = await axiosInstance.get<PaginatedResponse>('/api/medicines', {
+      setLoading(true);
+      const response = await axiosInstance.get<Medicine[]>('/api/medicines', {
         params: {
           page: currentPage,
           limit: 10,
@@ -55,13 +60,14 @@ const MedicineList = () => {
           sortOrder
         }
       });
-      setMedicines(response.data.data);
-      setTotalPages(response.data.totalPages);
-      setLoading(false);
+      setMedicines(response.data || []);
+      setTotalPages(Math.ceil(response.data.length / 10));
+      setError('');
     } catch (err) {
       setError('Failed to fetch medicines');
-      setLoading(false);
       console.error('Error fetching medicines:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -110,8 +116,30 @@ const MedicineList = () => {
     }
   };
 
-  if (loading) return <div className="p-4">Loading medicines...</div>;
-  if (error) return <div className="p-4 text-red-500">{error}</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-500 text-center">
+          <p className="text-xl font-semibold mb-2">Error Loading Medicines</p>
+          <p>{error}</p>
+          <button
+            onClick={fetchMedicines}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -220,57 +248,94 @@ const MedicineList = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {medicines.map((medicine) => (
-              <tr key={medicine.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <Package className="h-5 w-5 text-gray-400 mr-3" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{medicine.name}</div>
-                      <div className="text-sm text-gray-500">{medicine.generic_name}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                    {medicine.category_name}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{medicine.stock_quantity} {medicine.unit}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {formatPeso(medicine.price)}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {medicine.supplier_name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex space-x-3">
-                    <button 
-                      onClick={() => {
-                        setEditingMedicine(medicine);
-                        setIsModalOpen(true);
-                      }}
-                      className="text-indigo-600 hover:text-indigo-900"
-                    >
-                      <Edit className="h-5 w-5" />
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setMedicineToDelete(medicine.id);
-                        setIsDeleteModalOpen(true);
-                      }}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  </div>
+            {medicines.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  No medicines found
                 </td>
               </tr>
-            ))}
+            ) : (
+              medicines.map((medicine) => (
+                <tr key={medicine.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <Package className="h-5 w-5 text-gray-400 mr-3" />
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{medicine.name}</div>
+                        <div className="text-sm text-gray-500">{medicine.generic_name}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                      {medicine.category_name}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        medicine.stock_status === 'out_of_stock'
+                          ? 'bg-red-100 text-red-800'
+                          : medicine.stock_status === 'low_stock'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        <div className={`w-2 h-2 rounded-full mr-2 ${
+                          medicine.stock_status === 'out_of_stock'
+                            ? 'bg-red-500'
+                            : medicine.stock_status === 'low_stock'
+                            ? 'bg-yellow-500'
+                            : 'bg-green-500'
+                        }`}></div>
+                        {medicine.stock_status === 'out_of_stock'
+                          ? 'Out of Stock'
+                          : medicine.stock_status === 'low_stock'
+                          ? `Low Stock (Below ${medicine.min_stock_level})`
+                          : 'In Stock'}
+                      </div>
+                      <span className="text-gray-500">
+                        {medicine.stock_quantity} / {medicine.max_stock_level} {medicine.unit}
+                      </span>
+                    </div>
+                    {medicine.stock_quantity <= medicine.reorder_point && medicine.stock_quantity > 0 && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        Reorder Point Reached ({medicine.reorder_point} {medicine.unit})
+                      </p>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {formatPeso(medicine.price)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {medicine.supplier_name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-3">
+                      <button 
+                        onClick={() => {
+                          setEditingMedicine(medicine);
+                          setIsModalOpen(true);
+                        }}
+                        className="text-indigo-600 hover:text-indigo-900"
+                      >
+                        <Edit className="h-5 w-5" />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setMedicineToDelete(medicine.id);
+                          setIsDeleteModalOpen(true);
+                        }}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

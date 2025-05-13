@@ -1,117 +1,84 @@
 import pool from '../config/database.js';
 
-export const UserProfileService = {
-  // Get user profile by user ID
+const UserProfileService = {
+  // Get user profile
   async getProfile(userId) {
     const [rows] = await pool.query(
-      `SELECT 
-        u.email,
-        u.role,
-        up.*
-      FROM users u
-      LEFT JOIN user_profiles up ON u.id = up.user_id
-      WHERE u.id = ?`,
+      'SELECT * FROM user_profiles WHERE user_id = ?',
+      [userId]
+    );
+    return rows[0] || null;
+  },
+
+  // Ensure profile exists for user
+  async ensureProfileExists(userId) {
+    const [rows] = await pool.query(
+      'SELECT id FROM user_profiles WHERE user_id = ?',
       [userId]
     );
 
-    return rows[0] || null;
+    if (rows.length === 0) {
+      await pool.query(
+        'INSERT INTO user_profiles (user_id) VALUES (?)',
+        [userId]
+      );
+    }
   },
 
   // Create or update user profile
   async updateProfile(userId, profileData) {
     const {
-      first_name,
-      last_name,
-      phone_number,
-      address,
-      city,
-      state,
-      country,
-      postal_code,
-      bio,
-      date_of_birth,
-      gender
+      first_name = null,
+      last_name = null,
+      phone_number = null,
+      address = null,
+      city = null,
+      state_province = null,
+      country = null,
+      postal_code = null,
+      bio = null
     } = profileData;
 
-    // Check if profile exists
-    const [existing] = await pool.query(
-      'SELECT id FROM user_profiles WHERE user_id = ?',
-      [userId]
-    );
+    await this.ensureProfileExists(userId);
 
-    if (existing.length === 0) {
-      // Create new profile
-      await pool.query(
-        `INSERT INTO user_profiles (
-          user_id,
-          first_name,
-          last_name,
-          phone_number,
-          address,
-          city,
-          state,
-          country,
-          postal_code,
-          bio,
-          date_of_birth,
-          gender
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          userId,
-          first_name,
-          last_name,
-          phone_number,
-          address,
-          city,
-          state,
-          country,
-          postal_code,
-          bio,
-          date_of_birth,
-          gender
-        ]
-      );
-    } else {
-      // Update existing profile
-      await pool.query(
-        `UPDATE user_profiles SET
-          first_name = ?,
-          last_name = ?,
-          phone_number = ?,
-          address = ?,
-          city = ?,
-          state = ?,
-          country = ?,
-          postal_code = ?,
-          bio = ?,
-          date_of_birth = ?,
-          gender = ?
-        WHERE user_id = ?`,
-        [
-          first_name,
-          last_name,
-          phone_number,
-          address,
-          city,
-          state,
-          country,
-          postal_code,
-          bio,
-          date_of_birth,
-          gender,
-          userId
-        ]
-      );
-    }
+    // Update existing profile
+    const [result] = await pool.query(
+      `UPDATE user_profiles SET
+        first_name = ?,
+        last_name = ?,
+        phone_number = ?,
+        address = ?,
+        city = ?,
+        state_province = ?,
+        country = ?,
+        postal_code = ?,
+        bio = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ?`,
+      [
+        first_name || null,
+        last_name || null,
+        phone_number || null,
+        address || null,
+        city || null,
+        state_province || null,
+        country || null,
+        postal_code || null,
+        bio || null,
+        userId
+      ]
+    );
 
     return this.getProfile(userId);
   },
 
   // Update avatar URL
   async updateAvatar(userId, avatarUrl) {
+    await this.ensureProfileExists(userId);
+    
     await pool.query(
       'UPDATE user_profiles SET avatar_url = ? WHERE user_id = ?',
-      [avatarUrl, userId]
+      [avatarUrl || null, userId]
     );
 
     return this.getProfile(userId);
@@ -124,4 +91,6 @@ export const UserProfileService = {
       [userId]
     );
   }
-}; 
+};
+
+export default UserProfileService; 
