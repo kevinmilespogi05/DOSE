@@ -11,7 +11,9 @@ import path from 'path';
 import paymongoRoutes from './routes/paymongo';
 import prescriptionRoutes from './routes/prescriptions';
 import authRoutes from './routes/auth';
+import mfaRoutes from './routes/mfa';
 import { v4 as uuidv4 } from 'uuid';
+import userRoutes from './routes/users';
 
 // Initialize admin user
 async function initializeAdmin() {
@@ -73,6 +75,8 @@ app.use(express.static('public'));
 app.use('/api/auth', authRoutes);
 app.use('/api/paymongo', paymongoRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/mfa', mfaRoutes);
+app.use('/api/users', userRoutes);
 
 // In-memory storage (replace with a proper database in production)
 const users: any[] = [];

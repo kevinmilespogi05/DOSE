@@ -2,8 +2,52 @@ import { z } from 'zod';
 
 export const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters')
 });
+
+export const mfaTokenSchema = z.object({
+  token: z.string().min(6, 'Code must be at least 6 characters').max(8, 'Code must be at most 8 characters')
+});
+
+export const backupCodeSchema = z.object({
+  code: z.string().length(8, 'Backup code must be 8 characters')
+});
+
+export type LoginFormData = z.infer<typeof loginSchema>;
+export type MFACredentials = z.infer<typeof mfaTokenSchema>;
+export type BackupCodeCredentials = z.infer<typeof backupCodeSchema>;
+
+export interface LoginResponse {
+  token?: string;
+  requiresMFA?: boolean;
+  email?: string;
+  message?: string;
+  user?: {
+    id: number;
+    email: string;
+    role: string;
+  };
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+  requiresMFA?: boolean;
+}
+
+export interface MFASetupResponse {
+  secret: string;
+  qrCode: string;
+}
+
+export interface MFAEnableResponse {
+  message: string;
+  backupCodes: string[];
+}
+
+export interface MFAStatus {
+  isEnabled: boolean;
+}
 
 export const registerSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -16,5 +60,4 @@ export const registerSchema = z.object({
   path: ["confirmPassword"],
 });
 
-export type LoginFormData = z.infer<typeof loginSchema>;
 export type RegisterFormData = z.infer<typeof registerSchema>; 

@@ -9,6 +9,24 @@ import { authenticateToken } from '../middleware/auth';
 import { query, execute } from '../../utils/db';
 import CONFIG from '../../config/config';
 import { v4 as uuidv4 } from 'uuid';
+import speakeasy from 'speakeasy';
+import { Request, Response } from 'express';
+import { RowDataPacket, ResultSetHeader, FieldPacket } from 'mysql2/promise';
+
+interface User extends RowDataPacket {
+  id: number;
+  email: string;
+  role: string;
+  mfa_secret: string;
+}
+
+interface AuthRequest extends Request {
+  user?: {
+    id: number;
+    email: string;
+    role: string;
+  };
+}
 
 const router = Router();
 
@@ -222,30 +240,63 @@ router.post('/verify-mfa',
 // Verify MFA during login
 router.post('/verify-mfa-login',
   body('email').isEmail(),
-  body('otp').isLength({ min: 6, max: 6 }),
-  async (req, res) => {
+  body('otp').isLength({ min: 6, max: 6 }).isNumeric(),
+  async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        console.log('Validation errors:', errors.array());
+        return res.status(400).json({ 
+          message: 'Invalid input',
+          errors: errors.array() 
+        });
       }
 
       const { email, otp } = req.body;
+      console.log('Processing MFA verification for email:', email.slice(0, 3) + '...');
 
+      // First check if the user exists and has MFA enabled
       const [users] = await pool.query(
-        'SELECT u.id, ms.mfa_secret FROM users u JOIN mfa_settings ms ON u.id = ms.user_id WHERE u.email = ? AND ms.is_enabled = 1',
+        'SELECT u.id, u.email, u.role, m.mfa_secret FROM users u LEFT JOIN user_mfa m ON u.id = m.user_id WHERE u.email = ?',
         [email]
       );
 
-      if (users.length === 0) {
-        return res.status(400).json({ message: 'Invalid email or MFA not enabled' });
+      if (!users || users.length === 0) {
+        return res.status(400).json({ message: 'User not found' });
       }
 
-      if (verifyOTP(otp, users[0].mfa_secret)) {
-        const token = jwt.sign({ id: users[0].id }, process.env.JWT_SECRET!, { expiresIn: '24h' });
-        res.json({ token });
+      const user = users[0];
+      
+      if (!user.mfa_secret) {
+        return res.status(400).json({ message: 'MFA not set up for this user' });
+      }
+
+      // Verify the OTP
+      const verified = speakeasy.totp.verify({
+        secret: user.mfa_secret,
+        encoding: 'base32',
+        token: otp,
+        window: 2 // Allow 1 minute window (30 seconds before and after)
+      });
+
+      console.log('MFA verification result:', verified);
+
+      if (verified) {
+        const token = jwt.sign(
+          { id: user.id, email: user.email, role: user.role },
+          process.env.JWT_SECRET || 'your_jwt_secret',
+          { expiresIn: '24h' }
+        );
+        res.json({
+          token,
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role
+          }
+        });
       } else {
-        res.status(400).json({ message: 'Invalid OTP' });
+        res.status(400).json({ message: 'Invalid verification code' });
       }
     } catch (error) {
       console.error('MFA login verification error:', error);
@@ -253,5 +304,156 @@ router.post('/verify-mfa-login',
     }
   }
 );
+
+// Login route
+router.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        console.log('Login attempt for:', email);
+
+        // Get user from database
+        const [users] = await pool.query(
+            'SELECT u.id, u.email, u.password_hash, u.role, m.is_enabled as mfa_enabled, m.mfa_secret FROM users u LEFT JOIN user_mfa m ON u.id = m.user_id WHERE u.email = ?',
+            [email]
+        );
+
+        if (users.length === 0) {
+            return res.status(400).json({ message: 'Invalid credentials' });
+        }
+
+        const user = users[0];
+        const validPassword = await bcrypt.compare(password, user.password_hash);
+
+        if (!validPassword) {
+            return res.status(400).json({ message: 'Invalid credentials' });
+        }
+
+        // If MFA is enabled, don't generate token yet
+        if (user.mfa_enabled) {
+            return res.json({
+                requiresMFA: true,
+                email: user.email,
+                message: 'MFA verification required'
+            });
+        }
+
+        // If MFA is not enabled, generate and send token
+        const token = jwt.sign(
+            { id: user.id, email: user.email, role: user.role },
+            process.env.JWT_SECRET || 'your_jwt_secret'
+        );
+
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Error logging in' });
+    }
+});
+
+// Verify MFA token
+router.post('/verify-mfa', async (req, res) => {
+    try {
+        const { email, token } = req.body;
+
+        // Get user and MFA details
+        const [users] = await pool.query(
+            'SELECT u.id, u.email, u.role, m.mfa_secret FROM users u JOIN user_mfa m ON u.id = m.user_id WHERE u.email = ? AND m.is_enabled = true',
+            [email]
+        );
+
+        if (users.length === 0) {
+            return res.status(400).json({ message: 'Invalid user or MFA not enabled' });
+        }
+
+        const user = users[0];
+
+        // Verify token
+        const verified = speakeasy.totp.verify({
+            secret: user.mfa_secret,
+            encoding: 'base32',
+            token: token
+        });
+
+        if (!verified) {
+            return res.status(400).json({ message: 'Invalid MFA token' });
+        }
+
+        // Generate JWT token
+        const jwtToken = jwt.sign(
+            { id: user.id, email: user.email, role: user.role },
+            process.env.JWT_SECRET || 'your_jwt_secret'
+        );
+
+        res.json({
+            token: jwtToken,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('MFA verification error:', error);
+        res.status(500).json({ message: 'Error verifying MFA token' });
+    }
+});
+
+// Verify backup code
+router.post('/verify-backup', async (req, res) => {
+    try {
+        const { email, code } = req.body;
+
+        // Get user and MFA details
+        const [users] = await pool.query(
+            'SELECT u.id, u.email, u.role, m.backup_codes FROM users u JOIN user_mfa m ON u.id = m.user_id WHERE u.email = ? AND m.is_enabled = true',
+            [email]
+        );
+
+        if (users.length === 0) {
+            return res.status(400).json({ message: 'Invalid user or MFA not enabled' });
+        }
+
+        const user = users[0];
+        const backupCodes = JSON.parse(user.backup_codes || '[]');
+
+        // Check if the code exists in backup codes
+        const codeIndex = backupCodes.indexOf(code);
+        if (codeIndex === -1) {
+            return res.status(400).json({ message: 'Invalid backup code' });
+        }
+
+        // Remove used backup code
+        backupCodes.splice(codeIndex, 1);
+        await pool.query(
+            'UPDATE user_mfa SET backup_codes = ? WHERE user_id = ?',
+            [JSON.stringify(backupCodes), user.id]
+        );
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { id: user.id, email: user.email, role: user.role },
+            process.env.JWT_SECRET || 'your_jwt_secret'
+        );
+
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('Backup code verification error:', error);
+        res.status(500).json({ message: 'Error verifying backup code' });
+    }
+});
 
 export default router; 

@@ -42,6 +42,7 @@ const Sidebar = () => {
     { icon: History, label: 'Order History', path: '/order-history' },
     { icon: ShoppingBag, label: 'Cart', path: '/cart' },
     { icon: FileText, label: 'Prescriptions', path: '/prescriptions' },
+    { icon: UserCog, label: 'Profile', path: '/profile' },
   ];
 
   const menuItems = isAdmin ? adminMenuItems : userMenuItems;
