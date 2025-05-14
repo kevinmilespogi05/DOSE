@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 13, 2025 at 07:04 PM
+-- Generation Time: May 14, 2025 at 05:28 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -42,7 +42,8 @@ INSERT INTO `cart` (`id`, `user_id`, `created_at`, `updated_at`) VALUES
 (1, 2, '2025-05-12 11:52:17', '2025-05-12 11:52:17'),
 (2, 3, '2025-05-12 11:52:28', '2025-05-12 11:52:28'),
 (3, 7, '2025-05-13 02:05:45', '2025-05-13 02:05:45'),
-(4, 8, '2025-05-13 16:12:40', '2025-05-13 16:12:40');
+(4, 8, '2025-05-13 16:12:40', '2025-05-13 16:12:40'),
+(5, 4, '2025-05-13 18:04:23', '2025-05-13 18:04:23');
 
 -- --------------------------------------------------------
 
@@ -64,7 +65,9 @@ CREATE TABLE `cart_items` (
 --
 
 INSERT INTO `cart_items` (`id`, `cart_id`, `medicine_id`, `quantity`, `created_at`, `updated_at`) VALUES
-(1, 2, 27, 1, '2025-05-12 17:03:06', '2025-05-12 17:03:06');
+(1, 2, 27, 1, '2025-05-12 17:03:06', '2025-05-12 17:03:06'),
+(2, 4, 30, 1, '2025-05-14 03:20:21', '2025-05-14 03:20:21'),
+(3, 4, 21, 1, '2025-05-14 03:20:27', '2025-05-14 03:20:27');
 
 -- --------------------------------------------------------
 
@@ -130,13 +133,7 @@ CREATE TABLE `medicines` (
   `reorder_point` int(11) DEFAULT 20,
   `image_url` varchar(255) DEFAULT 'https://via.placeholder.com/400x300?text=Medicine+Image',
   `barcode` varchar(50) DEFAULT NULL,
-  `stock_status` enum('in_stock','low_stock','out_of_stock') GENERATED ALWAYS AS (
-    CASE 
-      WHEN stock_quantity = 0 THEN 'out_of_stock'
-      WHEN stock_quantity <= min_stock_level THEN 'low_stock'
-      ELSE 'in_stock'
-    END
-  ) STORED,
+  `stock_status` enum('in_stock','low_stock','out_of_stock') GENERATED ALWAYS AS (case when `stock_quantity` = 0 then 'out_of_stock' when `stock_quantity` <= `min_stock_level` then 'low_stock' else 'in_stock' end) STORED,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -145,27 +142,23 @@ CREATE TABLE `medicines` (
 -- Dumping data for table `medicines`
 --
 
-INSERT INTO `medicines` (`id`, `name`, `generic_name`, `brand`, `category_id`, `description`, `price`, `stock_quantity`, `unit`, `expiry_date`, `supplier_id`, `requires_prescription`, `min_stock_level`, `max_stock_level`, `reorder_point`, `image_url`, `barcode`, `stock_status`, `created_at`, `updated_at`) VALUES
-(16, 'Cetirizine', 'Cetirizine', 'AllerCare', 4, NULL, 10.00, 27, 'tablets', '2027-11-15', 1, 1, 10, 100, 20, '/images/medicines/medicine-1742266313085.png', NULL, 'in_stock', '2025-03-18 02:51:17', '2025-03-18 07:22:52'),
-(17, 'Omeprazole', 'Omeprazole', 'Omezol', 3, NULL, 15.00, 50, 'tablets', '2026-12-12', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267049716.png', NULL, 'in_stock', '2025-03-18 03:04:09', '2025-03-18 03:05:16'),
-(18, 'Amoxicillin', 'Amoxicillin', 'AmoCare', 1, NULL, 25.00, 72, 'capsules', '2025-09-05', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267157362.png', NULL, 'in_stock', '2025-03-18 03:05:57', '2025-03-18 07:22:52'),
-(19, 'Losartan', 'Losartan Potassium', 'CardioSafe', 6, NULL, 20.00, 40, 'tablets', '2027-11-15', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267241910.png', NULL, 'in_stock', '2025-03-18 03:06:41', '2025-03-18 03:07:22'),
-(20, 'Paracetamol', 'Paracetamol', 'PainAway', 2, NULL, 5.00, 90, 'tablets', '2026-03-22', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267302037.png', NULL, 'in_stock', '2025-03-18 03:08:22', '2025-03-18 03:08:22'),
-(21, 'Ascorbic Acid', 'Vitamin C', 'VitaBoost', 5, NULL, 12.00, 60, 'tablets', '2027-10-30', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742267346487.png', NULL, 'in_stock', '2025-03-18 03:09:06', '2025-03-18 03:09:06'),
-(22, 'Multivitamins', 'Multivitamins', 'VitaComplete', 5, NULL, 20.00, 75, 'tablets', '2027-03-14', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267845660.png', NULL, 'in_stock', '2025-03-18 03:17:25', '2025-03-18 03:17:25'),
-(23, 'Ferrous Sulfate', 'Iron Supplement', 'FerroStrong', 5, NULL, 18.00, 45, 'capsules', '2026-12-28', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267882304.png', NULL, 'in_stock', '2025-03-18 03:18:02', '2025-03-18 03:18:02'),
-(24, 'Mefenamic Acid', 'Mefenamic Acid', 'Mefenax', 2, NULL, 12.00, 80, 'capsules', '2025-07-05', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742267932238.png', NULL, 'in_stock', '2025-03-18 03:18:52', '2025-03-18 03:18:52'),
-(25, 'Ibuprofen', 'Ibuprofen', 'IbuRelief', 2, NULL, 8.00, 70, 'tablets', '2026-10-11', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267991905.png', NULL, 'in_stock', '2025-03-18 03:19:52', '2025-03-18 03:19:52'),
-(26, 'Metoprolol', 'Metoprolol', 'BetaCare', 6, NULL, 18.00, 48, 'tablets', '2027-09-22', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742268044871.png', NULL, 'in_stock', '2025-03-18 03:20:44', '2025-03-18 03:20:44'),
-(27, 'Amlodipine', 'Amlodipine', 'CardioTone', 6, NULL, 22.00, 47, 'tablets', '2026-05-10', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742268082971.png', NULL, 'in_stock', '2025-03-18 03:21:23', '2025-03-18 07:22:52'),
-(28, 'Loratadine', 'Loratadine', 'LoraFast', 4, NULL, 12.00, 35, 'tablets', '2026-11-15', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268137814.png', NULL, 'in_stock', '2025-03-18 03:22:18', '2025-03-18 03:22:18'),
-(29, 'Cefalexin', 'Cefalexin', 'CefaPlus', 1, NULL, 28.00, 55, 'capsules', '2026-04-02', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742268186917.png', NULL, 'in_stock', '2025-03-18 03:23:07', '2025-03-18 03:23:07'),
-(30, 'Azithromycin', 'Azithromycin', 'AzitroMed', 1, NULL, 30.00, 60, 'tablets', '2027-06-18', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268241000.png', NULL, 'in_stock', '2025-03-18 03:24:01', '2025-03-18 03:24:01'),
-(31, 'Ranitidine', 'Ranitidine', 'RaniRelief', 3, NULL, 18.00, 45, 'tablets', '2025-08-20', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742268298639.png', NULL, 'in_stock', '2025-03-18 03:24:58', '2025-03-18 03:24:58');
-
---
--- Update existing medicines to recalculate their stock status
-UPDATE medicines SET stock_quantity = stock_quantity;
+INSERT INTO `medicines` (`id`, `name`, `generic_name`, `brand`, `category_id`, `description`, `price`, `stock_quantity`, `unit`, `expiry_date`, `supplier_id`, `requires_prescription`, `min_stock_level`, `max_stock_level`, `reorder_point`, `image_url`, `barcode`, `created_at`, `updated_at`) VALUES
+(16, 'Cetirizine', 'Cetirizine', 'AllerCare', 4, NULL, 10.00, 27, 'tablets', '2027-11-15', 1, 1, 10, 100, 20, '/images/medicines/medicine-1742266313085.png', NULL, '2025-03-18 02:51:17', '2025-03-18 07:22:52'),
+(17, 'Omeprazole', 'Omeprazole', 'Omezol', 3, NULL, 15.00, 50, 'tablets', '2026-12-12', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267049716.png', NULL, '2025-03-18 03:04:09', '2025-03-18 03:05:16'),
+(18, 'Amoxicillin', 'Amoxicillin', 'AmoCare', 1, NULL, 25.00, 72, 'capsules', '2025-09-05', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267157362.png', NULL, '2025-03-18 03:05:57', '2025-03-18 07:22:52'),
+(19, 'Losartan', 'Losartan Potassium', 'CardioSafe', 6, NULL, 20.00, 40, 'tablets', '2027-11-15', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267241910.png', NULL, '2025-03-18 03:06:41', '2025-03-18 03:07:22'),
+(20, 'Paracetamol', 'Paracetamol', 'PainAway', 2, NULL, 5.00, 90, 'tablets', '2026-03-22', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267302037.png', NULL, '2025-03-18 03:08:22', '2025-03-18 03:08:22'),
+(21, 'Ascorbic Acid', 'Vitamin C', 'VitaBoost', 5, NULL, 12.00, 60, 'tablets', '2027-10-30', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742267346487.png', NULL, '2025-03-18 03:09:06', '2025-03-18 03:09:06'),
+(22, 'Multivitamins', 'Multivitamins', 'VitaComplete', 5, NULL, 20.00, 75, 'tablets', '2027-03-14', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267845660.png', NULL, '2025-03-18 03:17:25', '2025-03-18 03:17:25'),
+(23, 'Ferrous Sulfate', 'Iron Supplement', 'FerroStrong', 5, NULL, 18.00, 45, 'capsules', '2026-12-28', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267882304.png', NULL, '2025-03-18 03:18:02', '2025-03-18 03:18:02'),
+(24, 'Mefenamic Acid', 'Mefenamic Acid', 'Mefenax', 2, NULL, 12.00, 80, 'capsules', '2025-07-05', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742267932238.png', NULL, '2025-03-18 03:18:52', '2025-03-18 03:18:52'),
+(25, 'Ibuprofen', 'Ibuprofen', 'IbuRelief', 2, NULL, 8.00, 70, 'tablets', '2026-10-11', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267991905.png', NULL, '2025-03-18 03:19:52', '2025-03-18 03:19:52'),
+(26, 'Metoprolol', 'Metoprolol', 'BetaCare', 6, NULL, 18.00, 48, 'tablets', '2027-09-22', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742268044871.png', NULL, '2025-03-18 03:20:44', '2025-03-18 03:20:44'),
+(27, 'Amlodipine', 'Amlodipine', 'CardioTone', 4, NULL, 22.00, 3, 'capsules', '2003-05-11', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268082971.png', NULL, '2025-03-18 03:21:23', '2025-05-13 18:09:51'),
+(28, 'Loratadine', 'Loratadine', 'LoraFast', 4, NULL, 12.00, 35, 'tablets', '2026-11-15', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268137814.png', NULL, '2025-03-18 03:22:18', '2025-03-18 03:22:18'),
+(29, 'Cefalexin', 'Cefalexin', 'CefaPlus', 1, NULL, 28.00, 55, 'capsules', '2026-04-02', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742268186917.png', NULL, '2025-03-18 03:23:07', '2025-03-18 03:23:07'),
+(30, 'Azithromycin', 'Azithromycin', 'AzitroMed', 1, NULL, 30.00, 60, 'tablets', '2027-06-18', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268241000.png', NULL, '2025-03-18 03:24:01', '2025-03-18 03:24:01'),
+(31, 'Ranitidine', 'Ranitidine', 'RaniRelief', 3, NULL, 18.00, 45, 'tablets', '2025-08-20', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742268298639.png', NULL, '2025-03-18 03:24:58', '2025-03-18 03:24:58');
 
 -- --------------------------------------------------------
 
@@ -335,6 +328,29 @@ CREATE TABLE `product_reviews` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `ratings`
+--
+
+CREATE TABLE `ratings` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `medicine_id` int(11) NOT NULL,
+  `rating` int(11) NOT NULL CHECK (`rating` >= 1 and `rating` <= 5),
+  `review` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `ratings`
+--
+
+INSERT INTO `ratings` (`id`, `user_id`, `medicine_id`, `rating`, `review`, `created_at`, `updated_at`) VALUES
+(1, 8, 27, 5, 'wow', '2025-05-14 03:27:27', '2025-05-14 03:27:27');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `refunds`
 --
 
@@ -491,10 +507,8 @@ INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `role`, `reset_
 --
 -- Triggers `users`
 --
-DROP TRIGGER IF EXISTS after_user_insert;
 DELIMITER $$
-CREATE TRIGGER after_user_insert AFTER INSERT ON users FOR EACH ROW 
-BEGIN
+CREATE TRIGGER `after_user_insert` AFTER INSERT ON `users` FOR EACH ROW BEGIN
     IF NOT EXISTS (SELECT 1 FROM user_profiles WHERE user_id = NEW.id) THEN
         INSERT INTO user_profiles (user_id, created_at, updated_at)
         VALUES (NEW.id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
@@ -548,6 +562,14 @@ CREATE TABLE `user_profiles` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `user_profiles`
+--
+
+INSERT INTO `user_profiles` (`id`, `user_id`, `first_name`, `last_name`, `phone_number`, `address`, `city`, `state_province`, `country`, `postal_code`, `bio`, `created_at`, `updated_at`) VALUES
+(100, 3, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-13 18:03:32', '2025-05-13 18:03:32'),
+(102, 4, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-13 18:04:23', '2025-05-13 18:04:23'),
+(122, 8, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-14 02:18:51', '2025-05-14 02:18:51');
 
 -- --------------------------------------------------------
 
@@ -561,6 +583,37 @@ CREATE TABLE `wishlist` (
   `medicine_id` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `wishlist`
+--
+
+INSERT INTO `wishlist` (`id`, `user_id`, `medicine_id`, `created_at`) VALUES
+(1, 8, 27, '2025-05-14 02:52:04'),
+(4, 8, 18, '2025-05-14 02:54:26');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `wishlist_items`
+--
+
+CREATE TABLE `wishlist_items` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `medicine_id` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `wishlist_items`
+--
+
+INSERT INTO `wishlist_items` (`id`, `user_id`, `medicine_id`, `created_at`) VALUES
+(8, 8, 18, '2025-05-14 03:12:53'),
+(9, 8, 27, '2025-05-14 03:12:56'),
+(10, 8, 21, '2025-05-14 03:17:16'),
+(11, 8, 30, '2025-05-14 03:20:19');
 
 --
 -- Indexes for dumped tables
@@ -685,6 +738,14 @@ ALTER TABLE `product_reviews`
   ADD KEY `idx_reviews_status` (`status`);
 
 --
+-- Indexes for table `ratings`
+--
+ALTER TABLE `ratings`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_user_medicine` (`user_id`,`medicine_id`),
+  ADD KEY `medicine_id` (`medicine_id`);
+
+--
 -- Indexes for table `refunds`
 --
 ALTER TABLE `refunds`
@@ -768,4 +829,318 @@ ALTER TABLE `user_profiles`
 --
 -- Indexes for table `wishlist`
 --
-ALTER TABLE `
+ALTER TABLE `wishlist`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `user_medicine` (`user_id`,`medicine_id`),
+  ADD KEY `medicine_id` (`medicine_id`);
+
+--
+-- Indexes for table `wishlist_items`
+--
+ALTER TABLE `wishlist_items`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_user_medicine` (`user_id`,`medicine_id`),
+  ADD KEY `medicine_id` (`medicine_id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `cart`
+--
+ALTER TABLE `cart`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `cart_items`
+--
+ALTER TABLE `cart_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `coupons`
+--
+ALTER TABLE `coupons`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `inventory_transactions`
+--
+ALTER TABLE `inventory_transactions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `medicines`
+--
+ALTER TABLE `medicines`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+
+--
+-- AUTO_INCREMENT for table `medicine_categories`
+--
+ALTER TABLE `medicine_categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `mfa_settings`
+--
+ALTER TABLE `mfa_settings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `order_coupons`
+--
+ALTER TABLE `order_coupons`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `order_items`
+--
+ALTER TABLE `order_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `prescriptions`
+--
+ALTER TABLE `prescriptions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `prescription_items`
+--
+ALTER TABLE `prescription_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `product_reviews`
+--
+ALTER TABLE `product_reviews`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `ratings`
+--
+ALTER TABLE `ratings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `refunds`
+--
+ALTER TABLE `refunds`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `returns`
+--
+ALTER TABLE `returns`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `return_items`
+--
+ALTER TABLE `return_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `sessions`
+--
+ALTER TABLE `sessions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `shipping_methods`
+--
+ALTER TABLE `shipping_methods`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `suppliers`
+--
+ALTER TABLE `suppliers`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `tax_rates`
+--
+ALTER TABLE `tax_rates`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
+-- AUTO_INCREMENT for table `user_mfa`
+--
+ALTER TABLE `user_mfa`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `user_profiles`
+--
+ALTER TABLE `user_profiles`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=207;
+
+--
+-- AUTO_INCREMENT for table `wishlist`
+--
+ALTER TABLE `wishlist`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `wishlist_items`
+--
+ALTER TABLE `wishlist_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `cart`
+--
+ALTER TABLE `cart`
+  ADD CONSTRAINT `cart_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `cart_items`
+--
+ALTER TABLE `cart_items`
+  ADD CONSTRAINT `cart_items_cart_fk` FOREIGN KEY (`cart_id`) REFERENCES `cart` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `cart_items_medicine_fk` FOREIGN KEY (`medicine_id`) REFERENCES `medicines` (`id`);
+
+--
+-- Constraints for table `inventory_transactions`
+--
+ALTER TABLE `inventory_transactions`
+  ADD CONSTRAINT `inventory_transactions_medicine_fk` FOREIGN KEY (`medicine_id`) REFERENCES `medicines` (`id`),
+  ADD CONSTRAINT `inventory_transactions_supplier_fk` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`),
+  ADD CONSTRAINT `inventory_transactions_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `medicines`
+--
+ALTER TABLE `medicines`
+  ADD CONSTRAINT `medicines_category_fk` FOREIGN KEY (`category_id`) REFERENCES `medicine_categories` (`id`),
+  ADD CONSTRAINT `medicines_supplier_fk` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`);
+
+--
+-- Constraints for table `mfa_settings`
+--
+ALTER TABLE `mfa_settings`
+  ADD CONSTRAINT `mfa_settings_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `orders`
+--
+ALTER TABLE `orders`
+  ADD CONSTRAINT `orders_shipping_method_fk` FOREIGN KEY (`shipping_method_id`) REFERENCES `shipping_methods` (`id`),
+  ADD CONSTRAINT `orders_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `order_coupons`
+--
+ALTER TABLE `order_coupons`
+  ADD CONSTRAINT `order_coupons_coupon_fk` FOREIGN KEY (`coupon_id`) REFERENCES `coupons` (`id`),
+  ADD CONSTRAINT `order_coupons_order_fk` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `order_items`
+--
+ALTER TABLE `order_items`
+  ADD CONSTRAINT `order_items_medicine_fk` FOREIGN KEY (`medicine_id`) REFERENCES `medicines` (`id`),
+  ADD CONSTRAINT `order_items_order_fk` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `payments`
+--
+ALTER TABLE `payments`
+  ADD CONSTRAINT `payments_order_fk` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `prescriptions`
+--
+ALTER TABLE `prescriptions`
+  ADD CONSTRAINT `prescriptions_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `prescription_items`
+--
+ALTER TABLE `prescription_items`
+  ADD CONSTRAINT `prescription_items_medicine_fk` FOREIGN KEY (`medicine_id`) REFERENCES `medicines` (`id`),
+  ADD CONSTRAINT `prescription_items_prescription_fk` FOREIGN KEY (`prescription_id`) REFERENCES `prescriptions` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `product_reviews`
+--
+ALTER TABLE `product_reviews`
+  ADD CONSTRAINT `product_reviews_medicine_fk` FOREIGN KEY (`medicine_id`) REFERENCES `medicines` (`id`),
+  ADD CONSTRAINT `product_reviews_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `ratings`
+--
+ALTER TABLE `ratings`
+  ADD CONSTRAINT `ratings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `ratings_ibfk_2` FOREIGN KEY (`medicine_id`) REFERENCES `medicines` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `refunds`
+--
+ALTER TABLE `refunds`
+  ADD CONSTRAINT `refunds_return_fk` FOREIGN KEY (`return_id`) REFERENCES `returns` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `returns`
+--
+ALTER TABLE `returns`
+  ADD CONSTRAINT `returns_order_fk` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
+  ADD CONSTRAINT `returns_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `return_items`
+--
+ALTER TABLE `return_items`
+  ADD CONSTRAINT `return_items_order_item_fk` FOREIGN KEY (`order_item_id`) REFERENCES `order_items` (`id`),
+  ADD CONSTRAINT `return_items_return_fk` FOREIGN KEY (`return_id`) REFERENCES `returns` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `sessions`
+--
+ALTER TABLE `sessions`
+  ADD CONSTRAINT `sessions_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `user_mfa`
+--
+ALTER TABLE `user_mfa`
+  ADD CONSTRAINT `user_mfa_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `user_profiles`
+--
+ALTER TABLE `user_profiles`
+  ADD CONSTRAINT `user_profiles_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `wishlist`
+--
+ALTER TABLE `wishlist`
+  ADD CONSTRAINT `wishlist_medicine_fk` FOREIGN KEY (`medicine_id`) REFERENCES `medicines` (`id`),
+  ADD CONSTRAINT `wishlist_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `wishlist_items`
+--
+ALTER TABLE `wishlist_items`
+  ADD CONSTRAINT `wishlist_items_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `wishlist_items_ibfk_2` FOREIGN KEY (`medicine_id`) REFERENCES `medicines` (`id`) ON DELETE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

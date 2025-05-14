@@ -18,7 +18,8 @@ import {
   CreditCard,
   PieChart,
   FileText,
-  FileCheck
+  FileCheck,
+  Heart
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -39,6 +40,7 @@ const Sidebar = () => {
 
   const userMenuItems = [
     { icon: ShoppingCart, label: 'Shop', path: '/shop' },
+    { icon: Heart, label: 'Wishlist', path: '/wishlist' },
     { icon: History, label: 'Order History', path: '/order-history' },
     { icon: ShoppingBag, label: 'Cart', path: '/cart' },
     { icon: FileText, label: 'Prescriptions', path: '/prescriptions' },

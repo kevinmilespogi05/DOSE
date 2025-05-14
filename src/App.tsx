@@ -17,6 +17,7 @@ import MedicineList from './components/medicines/MedicineList';
 import Users from './components/admin/Users';
 import Shop from './components/shop/Shop';
 import Cart from './components/shop/Cart';
+import Wishlist from './components/shop/Wishlist';
 import { CartProvider } from './context/CartContext';
 import PaymentValidation from './components/admin/PaymentValidation';
 import PaymentSuccess from './pages/payment/PaymentSuccess';
@@ -89,6 +90,7 @@ function AppContent() {
               <Route path="/shop" element={<UserRoute element={<Shop />} />} />
               <Route path="/shop/medicine/:id" element={<UserRoute element={<ProductDetails />} />} />
               <Route path="/cart" element={<UserRoute element={<Cart />} />} />
+              <Route path="/wishlist" element={<UserRoute element={<Wishlist />} />} />
               <Route path="/order-history" element={<UserRoute element={<OrderHistory />} />} />
               <Route path="/prescriptions" element={<UserRoute element={<Prescriptions />} />} />
               

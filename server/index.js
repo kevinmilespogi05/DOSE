@@ -7,6 +7,8 @@ import dotenv from 'dotenv';
 import pool from './config/database.js';
 import mfaRoutes from './routes/mfa.js';
 import { authenticateToken } from './middleware/auth.js';
+const reviewRoutes = require('./routes/reviews');
+const wishlistRoutes = require('./routes/wishlist');
 
 // Load environment variables first
 dotenv.config();
@@ -54,6 +56,8 @@ const initializeServer = async () => {
     app.use('/api/chat', authenticateToken, chatRoutes.default);
     app.use('/api/orders', authenticateToken, orderRoutes.default);
     app.use('/api/payments', authenticateToken, paymentRoutes.default);
+    app.use('/api', reviewRoutes);
+    app.use('/api', wishlistRoutes);
 
     // Serve uploaded files
     app.use('/uploads', express.static('public/uploads'));

@@ -32,10 +32,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           // Decode token to get user info
           const decoded = jwtDecode(token) as { userId: number; role: string };
-          console.log('Decoded token:', decoded); // For debugging
 
           // Verify token by fetching user profile
-          const response = await api.get('/users/profile', {
+          const response = await api.get('/user/profile', {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -45,8 +44,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...response.data,
             role: decoded.role // Always use role from token
           };
-
-          console.log('User data:', userData); // For debugging
           
           setUser(userData);
           setIsAuthenticated(true);
@@ -99,14 +96,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Decode token to get user info
         const decoded = jwtDecode(response.data.token) as { userId: number; role: string };
-        console.log('Login decoded token:', decoded); // For debugging
         
         const userData = {
           ...response.data.user,
           role: decoded.role // Always use role from token
         };
-        
-        console.log('Login user data:', userData); // For debugging
         
         setUser(userData);
         setIsAuthenticated(true);

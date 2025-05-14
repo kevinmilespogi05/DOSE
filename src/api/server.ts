@@ -14,7 +14,10 @@ import authRoutes from './routes/auth';
 import mfaRoutes from './routes/mfa';
 import { v4 as uuidv4 } from 'uuid';
 import userRoutes from './routes/users';
+import wishlistRoutes from './routes/wishlist';
 import UserProfileService from '../services/userProfileService';
+import cartRoutes from './routes/cart';
+import ratingRoutes from './routes/ratings';
 
 // Initialize admin user
 async function initializeAdmin() {
@@ -68,16 +71,20 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from public directory
 app.use(express.static('public'));
 
 // Mount routes
 app.use('/api/auth', authRoutes);
-app.use('/api/paymongo', paymongoRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/user/wishlist', wishlistRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/mfa', mfaRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/paymongo', paymongoRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/ratings', ratingRoutes);
 
 // In-memory storage (replace with a proper database in production)
 const users: any[] = [];
@@ -91,6 +98,21 @@ testConnection();
 
 // Initialize admin on startup
 initializeAdmin();
+
+// Create wishlist_items table if it doesn't exist
+pool.query(`
+  CREATE TABLE IF NOT EXISTS wishlist_items (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    medicine_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_medicine (user_id, medicine_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
+  )
+`).catch(error => {
+  console.error('Error creating wishlist_items table:', error);
+});
 
 // Authentication middleware
 const authenticateToken = (req: any, res: any, next: any) => {
@@ -367,10 +389,14 @@ app.get('/api/medicines', authenticateToken, async (req: any, res) => {
           ELSE 'in_stock'
         END as stock_status,
         mc.name as category_name,
-        s.name as supplier_name
+        s.name as supplier_name,
+        COALESCE(AVG(r.rating), 0) as average_rating,
+        COUNT(r.id) as total_ratings
        FROM medicines m 
        LEFT JOIN medicine_categories mc ON m.category_id = mc.id
        LEFT JOIN suppliers s ON m.supplier_id = s.id
+       LEFT JOIN ratings r ON m.id = r.medicine_id
+       GROUP BY m.id
        ORDER BY m.name ASC`,
       []
     );
@@ -406,11 +432,15 @@ app.get('/api/medicines/:id', authenticateToken, async (req: any, res) => {
           ELSE 'in_stock'
         END as stock_status,
         mc.name as category_name,
-        s.name as supplier_name
+        s.name as supplier_name,
+        COALESCE(AVG(r.rating), 0) as average_rating,
+        COUNT(r.id) as total_ratings
        FROM medicines m 
        LEFT JOIN medicine_categories mc ON m.category_id = mc.id
        LEFT JOIN suppliers s ON m.supplier_id = s.id
-       WHERE m.id = ?`,
+       LEFT JOIN ratings r ON m.id = r.medicine_id
+       WHERE m.id = ?
+       GROUP BY m.id`,
       [id]
     );
 
