@@ -23,6 +23,7 @@ import PaymentValidation from './components/admin/PaymentValidation';
 import PaymentSuccess from './pages/payment/PaymentSuccess';
 import PaymentFailed from './pages/payment/PaymentFailed';
 import OrderHistory from './components/shop/OrderHistory';
+import OrderDetails from './pages/orders/OrderDetails';
 import Prescriptions from './components/shop/Prescriptions';
 import PrescriptionManagement from './components/admin/PrescriptionManagement';
 import Orders from './components/admin/Orders';
@@ -92,6 +93,7 @@ function AppContent() {
               <Route path="/cart" element={<UserRoute element={<Cart />} />} />
               <Route path="/wishlist" element={<UserRoute element={<Wishlist />} />} />
               <Route path="/order-history" element={<UserRoute element={<OrderHistory />} />} />
+              <Route path="/orders/:orderId" element={<UserRoute element={<OrderDetails />} />} />
               <Route path="/prescriptions" element={<UserRoute element={<Prescriptions />} />} />
               
               {/* Shared Protected Routes */}

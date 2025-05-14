@@ -172,12 +172,12 @@ const Wishlist = () => {
                     </div>
                     <p className="text-sm text-gray-500">Brand: {medicine.brand}</p>
                     <div className="flex items-center space-x-1">
-                      {renderStars(medicine.average_rating)}
-                      {medicine.average_rating > 0 && (
+                      {renderStars(medicine.average_rating || 0)}
+                      {medicine.average_rating ? (
                         <span className="text-sm text-gray-500">
-                          ({medicine.average_rating.toFixed(1)})
+                          ({Number(medicine.average_rating).toFixed(1)})
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     <div className="flex justify-between items-center pt-2">
                       <div>

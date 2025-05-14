@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
-import { pool } from '../server';
+import { pool } from '../../config/database';
 import { authenticateToken } from '../middleware/auth';
 import { sendEmail } from '../utils/email';
 import { v4 as uuidv4 } from 'uuid';
+import { execute, withTransaction } from '../../utils/db';
 
 const router = Router();
 
@@ -363,5 +364,246 @@ router.put('/reviews/:reviewId/moderate',
     }
   }
 );
+
+// Get order history
+router.get('/history', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // First get the orders
+    const orders = await execute(
+      `SELECT o.id, o.total_amount, o.status, o.created_at, o.updated_at
+       FROM orders o
+       WHERE o.user_id = ?
+       ORDER BY o.created_at DESC`,
+      [userId]
+    );
+
+    // Then get the order items for each order
+    const processedOrders = await Promise.all(orders.map(async (order) => {
+      const items = await execute(
+        `SELECT 
+          oi.medicine_id,
+          oi.quantity,
+          oi.unit_price,
+          m.name as medicine_name
+         FROM order_items oi
+         JOIN medicines m ON oi.medicine_id = m.id
+         WHERE oi.order_id = ?`,
+        [order.id]
+      );
+
+      return {
+        ...order,
+        total_amount: Number(order.total_amount),
+        items: items.map(item => ({
+          ...item,
+          unit_price: Number(item.unit_price)
+        }))
+      };
+    }));
+
+    res.json(processedOrders);
+  } catch (error) {
+    console.error('Error fetching order history:', error);
+    res.status(500).json({ message: 'Error fetching order history' });
+  }
+});
+
+// Get order tracking history
+router.get('/:orderId/tracking', authenticateToken, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.id;
+
+    // Verify order belongs to user
+    const orders = await execute(
+      'SELECT id, status FROM orders WHERE id = ? AND user_id = ?',
+      [orderId, userId]
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // If order status is payment_submitted, check and add tracking if not exists
+    if (orders[0].status === 'payment_submitted') {
+      const existingTracking = await execute(
+        'SELECT id FROM order_tracking WHERE order_id = ?',
+        [orderId]
+      );
+
+      if (existingTracking.length === 0) {
+        // Add initial tracking status
+        const trackingId = Date.now().toString();
+        await execute(
+          `INSERT INTO order_tracking (id, order_id, status, description)
+           VALUES (?, ?, ?, ?)`,
+          [
+            trackingId,
+            orderId,
+            'processing',
+            'Payment submitted and being verified.'
+          ]
+        );
+
+        // Add delivery tracking status
+        const deliveryTrackingId = (Date.now() + 1).toString();
+        await execute(
+          `INSERT INTO order_tracking (id, order_id, status, description, location)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            deliveryTrackingId,
+            orderId,
+            'shipping',
+            'Your order is on the way!',
+            'Dispatch Center'
+          ]
+        );
+      }
+    }
+
+    // Get tracking history
+    const tracking = await execute(
+      `SELECT id, status, description, location, created_at 
+       FROM order_tracking 
+       WHERE order_id = ? 
+       ORDER BY created_at DESC`,
+      [orderId]
+    );
+
+    res.json({ tracking });
+  } catch (error) {
+    console.error('Error fetching order tracking:', error);
+    res.status(500).json({ message: 'Error fetching order tracking' });
+  }
+});
+
+// Get single order details
+router.get('/:orderId', authenticateToken, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.id;
+
+    // First get the order details
+    const orders = await execute(
+      `SELECT o.* 
+       FROM orders o
+       WHERE o.id = ? AND o.user_id = ?`,
+      [orderId, userId]
+    );
+
+    if (!orders || orders.length === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Then get the order items
+    const items = await execute(
+      `SELECT 
+        oi.id,
+        m.name as product_name,
+        oi.quantity,
+        oi.unit_price as price
+       FROM order_items oi
+       LEFT JOIN medicines m ON oi.medicine_id = m.id
+       WHERE oi.order_id = ?`,
+      [orderId]
+    );
+
+    // Combine order and items
+    const formattedOrder = {
+      ...orders[0],
+      total_amount: Number(orders[0].total_amount),
+      items: items.map(item => ({
+        ...item,
+        price: Number(item.price)
+      }))
+    };
+
+    res.json(formattedOrder);
+  } catch (error) {
+    console.error('Error fetching order details:', error);
+    res.status(500).json({ message: 'Error fetching order details' });
+  }
+});
+
+// Add tracking status
+router.post('/:orderId/tracking', authenticateToken, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status, description, location } = req.body;
+    const userId = req.user.id;
+
+    // Verify order belongs to user or user is admin
+    const orders = await execute(
+      'SELECT id, status FROM orders WHERE id = ? AND (user_id = ? OR ? IN (SELECT user_id FROM admin_users))',
+      [orderId, userId, userId]
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // If order status is payment_submitted and no tracking exists, add initial tracking
+    if (orders[0].status === 'payment_submitted') {
+      const existingTracking = await execute(
+        'SELECT id FROM order_tracking WHERE order_id = ?',
+        [orderId]
+      );
+
+      if (existingTracking.length === 0) {
+        // Add initial tracking status
+        const trackingId = Date.now().toString();
+        await execute(
+          `INSERT INTO order_tracking (id, order_id, status, description)
+           VALUES (?, ?, ?, ?)`,
+          [
+            trackingId,
+            orderId,
+            'processing',
+            'Payment submitted and being verified.'
+          ]
+        );
+
+        // Add delivery tracking status
+        const deliveryTrackingId = (Date.now() + 1).toString();
+        await execute(
+          `INSERT INTO order_tracking (id, order_id, status, description, location)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            deliveryTrackingId,
+            orderId,
+            'shipping',
+            'Your order is on the way!',
+            'Dispatch Center'
+          ]
+        );
+      }
+    }
+
+    // Add new tracking status if provided
+    if (status && description) {
+      const trackingId = Date.now().toString();
+      await execute(
+        `INSERT INTO order_tracking (id, order_id, status, description, location)
+         VALUES (?, ?, ?, ?, ?)`,
+        [trackingId, orderId, status, description, location]
+      );
+
+      // Update order status if needed
+      if (status === 'delivered') {
+        await execute(
+          'UPDATE orders SET status = ? WHERE id = ?',
+          ['completed', orderId]
+        );
+      }
+    }
+
+    res.status(201).json({ message: 'Tracking status added successfully' });
+  } catch (error) {
+    console.error('Error adding tracking status:', error);
+    res.status(500).json({ message: 'Error adding tracking status' });
+  }
+});
 
 export default router; 

@@ -18,6 +18,7 @@ import wishlistRoutes from './routes/wishlist';
 import UserProfileService from '../services/userProfileService';
 import cartRoutes from './routes/cart';
 import ratingRoutes from './routes/ratings';
+import orderRoutes from './routes/orders';
 
 // Initialize admin user
 async function initializeAdmin() {
@@ -85,6 +86,7 @@ app.use('/api/mfa', mfaRoutes);
 app.use('/api/paymongo', paymongoRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/ratings', ratingRoutes);
+app.use('/api/orders', orderRoutes);
 
 // In-memory storage (replace with a proper database in production)
 const users: any[] = [];
@@ -977,13 +979,13 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
   let connection;
   try {
     console.log('Received order request:', req.body);
-    console.log('User ID:', req.user.userId);
+    console.log('User ID:', req.user.id);
 
     connection = await pool.getConnection();
     console.log('Database connection established');
 
     const { items, total_amount } = req.body;
-    const user_id = req.user.userId;
+    const user_id = req.user.id;
 
     // Validate required fields
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -1129,7 +1131,7 @@ app.post('/api/payments/gcash', authenticateToken, upload.single('paymentProof')
 app.post('/api/payments/verify', authenticateToken, async (req: any, res) => {
   try {
     const { orderId, sourceId } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     // Verify that the order belongs to the user
     const orders = await query(

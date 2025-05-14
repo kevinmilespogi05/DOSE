@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { Package } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -24,6 +26,7 @@ const OrderHistory = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -53,6 +56,10 @@ const OrderHistory = () => {
 
     fetchOrders();
   }, [isAuthenticated]);
+
+  const handleTrackOrder = (orderId: string) => {
+    navigate(`/orders/${orderId}`);
+  };
 
   if (loading) {
     return (
@@ -112,7 +119,7 @@ const OrderHistory = () => {
                 </div>
               </div>
               
-              <div className="border-t pt-4">
+              <div className="mb-4">
                 <h3 className="font-medium mb-2">Items:</h3>
                 <ul className="space-y-2">
                   {order.items && order.items.map((item) => (
@@ -124,6 +131,16 @@ const OrderHistory = () => {
                     </li>
                   ))}
                 </ul>
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => handleTrackOrder(order.id)}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  <Package className="w-4 h-4" />
+                  Track Order
+                </button>
               </div>
             </div>
           ))}

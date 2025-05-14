@@ -78,6 +78,33 @@ router.post('/create-source', authenticateToken, async (req, res) => {
         ['payment_submitted', orderId]
       );
       
+      // Add initial tracking status
+      const trackingId = Date.now().toString();
+      await execute(
+        `INSERT INTO order_tracking (id, order_id, status, description)
+         VALUES (?, ?, ?, ?)`,
+        [
+          trackingId,
+          orderId,
+          'processing',
+          'Payment submitted and being verified.'
+        ]
+      );
+
+      // Add delivery tracking status
+      const deliveryTrackingId = (Date.now() + 1).toString();
+      await execute(
+        `INSERT INTO order_tracking (id, order_id, status, description, location)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          deliveryTrackingId,
+          orderId,
+          'shipping',
+          'Your order is on the way!',
+          'Dispatch Center'
+        ]
+      );
+      
       // Clear cart after payment is submitted
       await execute(
         'DELETE FROM cart_items WHERE cart_id IN (SELECT id FROM cart WHERE user_id = ?)',
@@ -211,7 +238,34 @@ async function handleSuccessfulPayment(data: any) {
     // Update order status
     await execute(
       'UPDATE orders SET status = ? WHERE id = ?',
-      ['completed', order_id]
+      ['processing', order_id]
+    );
+
+    // Create initial tracking status
+    const trackingId = Date.now().toString();
+    await execute(
+      `INSERT INTO order_tracking (id, order_id, status, description)
+       VALUES (?, ?, ?, ?)`,
+      [
+        trackingId,
+        order_id,
+        'processing',
+        'Payment confirmed. Order is being processed.'
+      ]
+    );
+
+    // Add delivery tracking status
+    const deliveryTrackingId = (Date.now() + 1).toString();
+    await execute(
+      `INSERT INTO order_tracking (id, order_id, status, description, location)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        deliveryTrackingId,
+        order_id,
+        'shipping',
+        'Your order is on the way!',
+        'Dispatch Center'
+      ]
     );
 
     // Get cart ID for this user
