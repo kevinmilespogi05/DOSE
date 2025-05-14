@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
+import { formatPeso } from '../utils/currency';
 
 interface WishlistItem {
   id: number;
@@ -84,7 +85,7 @@ const Wishlist: React.FC = () => {
               <h3 className="text-lg font-semibold mb-2">{item.name}</h3>
               
               <div className="flex justify-between items-center mb-4">
-                <span className="text-lg font-bold">${item.price.toFixed(2)}</span>
+                <span className="text-lg font-bold">{formatPeso(item.price)}</span>
                 <span className={`text-sm ${
                   item.stock_quantity > 0 ? 'text-green-600' : 'text-red-600'
                 }`}>

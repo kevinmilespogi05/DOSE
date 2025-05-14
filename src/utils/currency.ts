@@ -3,6 +3,7 @@ export const formatPeso = (amount: number | string): string => {
   return new Intl.NumberFormat('en-PH', {
     style: 'currency',
     currency: 'PHP',
+    currencyDisplay: 'symbol',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(numericAmount);

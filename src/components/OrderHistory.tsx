@@ -123,7 +123,7 @@ const OrderHistory: React.FC = () => {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold">${order.total_amount.toFixed(2)}</p>
+                  <p className="text-lg font-bold">₱{order.total_amount.toFixed(2)}</p>
                   <span className={`inline-block px-2 py-1 rounded text-sm ${
                     order.status === 'completed' ? 'bg-green-100 text-green-800' :
                     order.status === 'cancelled' ? 'bg-red-100 text-red-800' :

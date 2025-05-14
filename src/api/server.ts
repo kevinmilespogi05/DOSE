@@ -19,6 +19,7 @@ import UserProfileService from '../services/userProfileService';
 import cartRoutes from './routes/cart';
 import ratingRoutes from './routes/ratings';
 import orderRoutes from './routes/orders';
+import invoiceRoutes from './routes/invoices';
 
 // Initialize admin user
 async function initializeAdmin() {
@@ -87,6 +88,7 @@ app.use('/api/paymongo', paymongoRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/invoices', invoiceRoutes);
 
 // In-memory storage (replace with a proper database in production)
 const users: any[] = [];

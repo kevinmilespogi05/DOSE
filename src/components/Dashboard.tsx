@@ -10,7 +10,7 @@ const Dashboard = () => {
   const stats = [
     {
       title: 'Total Sales',
-      value: '$12,456',
+      value: '₱12,456',
       icon: DollarSign,
       change: '+12.5%',
       color: 'bg-green-500',
@@ -31,7 +31,7 @@ const Dashboard = () => {
     },
     {
       title: 'Monthly Revenue',
-      value: '$34,567',
+      value: '₱34,567',
       icon: TrendingUp,
       change: '+8.2%',
       color: 'bg-purple-500',
@@ -82,7 +82,7 @@ const Dashboard = () => {
                   <p className="font-medium">Customer {index + 1}</p>
                   <p className="text-sm text-gray-500">3 items</p>
                 </div>
-                <p className="font-semibold text-green-600">$123.45</p>
+                <p className="font-semibold text-green-600">₱123.45</p>
               </div>
             ))}
           </div>

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../lib/api';
 import { format } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Package } from 'lucide-react';
+import { Package, Download, Eye, X } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -25,6 +25,8 @@ const OrderHistory = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -35,16 +37,7 @@ const OrderHistory = () => {
           throw new Error('Not authenticated');
         }
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await axios.get('/api/orders/history', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await api.get('/orders/history');
         setOrders(response.data);
       } catch (err) {
         console.error('Error fetching orders:', err);
@@ -59,6 +52,48 @@ const OrderHistory = () => {
 
   const handleTrackOrder = (orderId: string) => {
     navigate(`/orders/${orderId}`);
+  };
+
+  const handlePreviewInvoice = async (orderId: string) => {
+    try {
+      // First generate the invoice if not already generated
+      await api.post(`/invoices/${orderId}/generate`);
+
+      // Set the preview URL with token
+      const token = localStorage.getItem('token');
+      const url = `${api.defaults.baseURL}/invoices/${orderId}/preview?token=${token}`;
+      setPreviewUrl(url);
+      setIsPreviewOpen(true);
+    } catch (error) {
+      console.error('Error previewing invoice:', error);
+      setError('Failed to preview invoice. Please try again later.');
+    }
+  };
+
+  const handleDownloadInvoice = async (orderId: string) => {
+    try {
+      // First generate the invoice if not already generated
+      await api.post(`/invoices/${orderId}/generate`);
+
+      // Then trigger the download with token
+      const token = localStorage.getItem('token');
+      window.open(`${api.defaults.baseURL}/invoices/${orderId}/download?token=${token}`, '_blank');
+    } catch (error: any) {
+      console.error('Error downloading invoice:', error);
+      let errorMessage = 'Failed to download invoice. Please try again later.';
+      
+      // Check if it's an API error with a specific message
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      setError(errorMessage);
+      
+      // Clear error after 5 seconds
+      setTimeout(() => {
+        setError('');
+      }, 5000);
+    }
   };
 
   if (loading) {
@@ -87,6 +122,33 @@ const OrderHistory = () => {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Order History</h1>
       
+      {/* Modal for PDF preview */}
+      {isPreviewOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-6xl h-[80vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="text-lg font-semibold">Invoice Preview</h2>
+              <button
+                onClick={() => {
+                  setIsPreviewOpen(false);
+                  setPreviewUrl('');
+                }}
+                className="p-1 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="flex-1 p-4">
+              <iframe
+                src={previewUrl}
+                className="w-full h-full border-0 rounded"
+                title="Invoice Preview"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {orders.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-gray-600">You haven't placed any orders yet.</p>
@@ -133,7 +195,7 @@ const OrderHistory = () => {
                 </ul>
               </div>
 
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex justify-end space-x-4">
                 <button
                   onClick={() => handleTrackOrder(order.id)}
                   className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
@@ -141,6 +203,16 @@ const OrderHistory = () => {
                   <Package className="w-4 h-4" />
                   Track Order
                 </button>
+
+                {(order.status === 'completed' || order.status === 'payment_submitted') && (
+                  <button
+                    onClick={() => handleDownloadInvoice(order.id)}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Invoice
+                  </button>
+                )}
               </div>
             </div>
           ))}

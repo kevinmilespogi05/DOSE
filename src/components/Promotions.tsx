@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
+import { formatPeso } from '../utils/currency';
 
 interface Coupon {
   id: number;
@@ -351,11 +352,11 @@ const Promotions: React.FC = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : `$${coupon.discount_value}`}
+                    {coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : formatPeso(coupon.discount_value)}
                   </div>
                   {coupon.min_purchase_amount > 0 && (
                     <div className="text-sm text-gray-500">
-                      Min: ${coupon.min_purchase_amount}
+                      Min: {formatPeso(coupon.min_purchase_amount)}
                     </div>
                   )}
                 </td>

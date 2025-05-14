@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../utils/api';
+import { formatPeso } from '../utils/currency';
 
 interface ReturnItem {
   id: number;
@@ -322,7 +323,7 @@ const Returns: React.FC = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    ${returnItem.total_refund_amount.toFixed(2)}
+                    {formatPeso(returnItem.total_refund_amount)}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

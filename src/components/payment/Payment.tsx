@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createSource } from '../../utils/paymongo';
 import { ArrowRight, Loader2 } from 'lucide-react';
+import { formatPeso } from '../../utils/currency';
 
 interface PaymentProps {
   orderId: string;
@@ -66,7 +67,7 @@ const Payment: React.FC<PaymentProps> = ({ orderId, totalAmount, onClose }) => {
         <div className="mb-6">
           <p className="text-lg font-medium text-gray-900">Order Total</p>
           <p className="text-3xl font-bold text-primary-600">
-            ₱{totalAmount.toFixed(2)}
+            {formatPeso(totalAmount)}
           </p>
         </div>
 

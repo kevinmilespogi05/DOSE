@@ -2,7 +2,7 @@ import express from 'express';
 import { body } from 'express-validator';
 import { authenticateToken } from '../middleware/auth';
 import { db } from '../../src/database/connection';
-import PDFDocument from 'pdfkit';
+import { generateInvoice } from '../../src/utils/invoiceGenerator';
 import fs from 'fs';
 import path from 'path';
 
@@ -86,8 +86,71 @@ router.post('/', [
 
     await db.query('COMMIT');
 
-    // Generate invoice
-    await generateInvoice(orderId);
+    // Generate invoice using the new generator
+    try {
+      const [orderDetails] = await db.query(`
+        SELECT 
+          o.*,
+          u.name as customer_name,
+          u.email as customer_email,
+          COALESCE(o.shipping_address, '') as address,
+          COALESCE(o.shipping_city, '') as city,
+          COALESCE(o.shipping_state, '') as state,
+          COALESCE(o.shipping_postal_code, '') as postal_code,
+          COALESCE(o.shipping_country, '') as country
+        FROM orders o
+        JOIN users u ON o.user_id = u.id
+        WHERE o.id = ?
+      `, [orderId]);
+
+      const [orderItems] = await db.query(`
+        SELECT 
+          oi.*,
+          p.name as product_name
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = ?
+      `, [orderId]);
+
+      const invoiceNumber = `INV-${new Date().toISOString().slice(0, 7).replace('-', '')}-${String(orderId).padStart(6, '0')}`;
+
+      const items = orderItems.map(item => ({
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: Number(item.price)
+      }));
+
+      const invoicePath = await generateInvoice({
+        invoiceNumber,
+        orderDate: new Date(orderDetails.created_at),
+        customerName: orderDetails.customer_name,
+        customerEmail: orderDetails.customer_email,
+        shippingAddress: {
+          address: orderDetails.address,
+          city: orderDetails.city,
+          state: orderDetails.state,
+          postalCode: orderDetails.postal_code,
+          country: orderDetails.country
+        },
+        items,
+        subtotal: Number(orderDetails.subtotal),
+        shippingCost: Number(orderDetails.shipping_cost),
+        taxAmount: Number(orderDetails.tax),
+        totalAmount: Number(orderDetails.total)
+      });
+
+      // Update order with invoice information
+      await db.query(`
+        UPDATE orders 
+        SET invoice_path = ?,
+            invoice_number = ?
+        WHERE id = ?
+      `, [invoicePath, invoiceNumber, orderId]);
+
+    } catch (invoiceError) {
+      console.error('Failed to generate invoice:', invoiceError);
+      // Don't fail the order creation if invoice generation fails
+    }
 
     res.json({
       message: 'Order placed successfully',
@@ -252,58 +315,5 @@ router.post('/:orderId/refund', [
     res.status(500).json({ error: 'Failed to request refund' });
   }
 });
-
-// Generate invoice
-async function generateInvoice(orderId) {
-  try {
-    const [order] = await db.query(`
-      SELECT 
-        o.*,
-        u.name as customer_name,
-        u.email as customer_email
-      FROM orders o
-      JOIN users u ON o.user_id = u.id
-      WHERE o.id = ?
-    `, [orderId]);
-
-    const orderItems = await db.query(`
-      SELECT 
-        oi.*,
-        p.name as product_name
-      FROM order_items oi
-      JOIN products p ON oi.product_id = p.id
-      WHERE oi.order_id = ?
-    `, [orderId]);
-
-    const doc = new PDFDocument();
-    const invoicePath = path.join(__dirname, '../../public/invoices', `invoice-${orderId}.pdf`);
-    doc.pipe(fs.createWriteStream(invoicePath));
-
-    // Add invoice content
-    doc.fontSize(25).text('Invoice', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(12).text(`Order #: ${orderId}`);
-    doc.text(`Date: ${new Date(order.created_at).toLocaleDateString()}`);
-    doc.text(`Customer: ${order.customer_name}`);
-    doc.text(`Email: ${order.customer_email}`);
-    doc.moveDown();
-
-    // Add items
-    doc.text('Items:', { underline: true });
-    orderItems.forEach(item => {
-      doc.text(`${item.product_name} x ${item.quantity} @ $${item.price}`);
-    });
-
-    doc.moveDown();
-    doc.text(`Subtotal: $${order.subtotal}`);
-    doc.text(`Tax: $${order.tax}`);
-    doc.text(`Shipping: $${order.shipping_cost}`);
-    doc.text(`Total: $${order.total}`, { bold: true });
-
-    doc.end();
-  } catch (error) {
-    console.error('Failed to generate invoice:', error);
-  }
-}
 
 export default router; 
