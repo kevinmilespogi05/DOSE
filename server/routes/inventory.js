@@ -157,6 +157,8 @@ router.post('/import', authenticateToken, async (req, res) => {
 // Get sales analytics
 router.get('/analytics', authenticateToken, async (req, res) => {
   try {
+    console.log('Fetching analytics data...');
+
     // Top selling products with trend analysis
     const topSelling = await pool.query(`
       SELECT 
@@ -179,8 +181,8 @@ router.get('/analytics', authenticateToken, async (req, res) => {
       LIMIT 10
     `);
 
-    // Sales trends with forecasting
-    const salesTrends = await pool.query(`
+    // Sales trends with forecasting - now with 90 days and debug logging
+    const [salesTrends] = await pool.query(`
       SELECT 
         DATE(o.created_at) as date,
         COUNT(DISTINCT o.id) as total_orders,
@@ -193,10 +195,12 @@ router.get('/analytics', authenticateToken, async (req, res) => {
       FROM orders o
       JOIN order_items oi ON o.id = oi.order_id
       WHERE o.status = 'completed'
-      AND o.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      AND o.created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
       GROUP BY DATE(o.created_at), DAYNAME(o.created_at), HOUR(o.created_at)
       ORDER BY date DESC
     `);
+
+    console.log('Sales trends data:', JSON.stringify(salesTrends, null, 2));
 
     // Inventory intelligence
     const inventoryAnalytics = await pool.query(`
@@ -267,10 +271,38 @@ router.get('/analytics', authenticateToken, async (req, res) => {
       topSelling,
       salesTrends,
       inventoryAnalytics,
-      customerInsights
+      customerInsights,
+      debug: {
+        queriedAt: new Date().toISOString(),
+        salesTrendsCount: salesTrends.length
+      }
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch analytics' });
+    console.error('Analytics error:', error);
+    res.status(500).json({ error: 'Failed to fetch analytics', details: error.message });
+  }
+});
+
+// Debug endpoint to check orders
+router.get('/debug/orders', authenticateToken, async (req, res) => {
+  try {
+    const [orders] = await pool.query(`
+      SELECT 
+        o.id,
+        o.status,
+        o.created_at,
+        COUNT(oi.id) as item_count,
+        SUM(oi.quantity * oi.price) as total_amount
+      FROM orders o
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      GROUP BY o.id, o.status, o.created_at
+      ORDER BY o.created_at DESC
+      LIMIT 10
+    `);
+    res.json(orders);
+  } catch (error) {
+    console.error('Debug orders error:', error);
+    res.status(500).json({ error: 'Failed to fetch debug orders data' });
   }
 });
 

@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: process.env.BASE_VITE_PATH || "/",
   plugins: [react()],
+  base: process.env.BASE_VITE_PATH || "/",
   server: {
     proxy: {
       '/api': {
@@ -15,6 +15,12 @@ export default defineConfig({
       },
     },
     open: '/login',
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: true,
+    chunkSizeWarningLimit: 1600
   },
   optimizeDeps: {
     exclude: ['lucide-react'],

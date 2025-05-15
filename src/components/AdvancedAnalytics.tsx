@@ -136,9 +136,15 @@ const AdvancedAnalytics: React.FC = () => {
   }, [user, navigate]);
 
   const formatCurrency = (value: number): string => {
-    return '₱' + value.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+    if (isNaN(value) || value === null) return '₱0.00';
+    return '₱' + Number(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -177,13 +183,25 @@ const AdvancedAnalytics: React.FC = () => {
             <div>
               <p className="text-sm text-gray-500">Total Revenue (30 days)</p>
               <p className="text-2xl font-bold text-gray-800">
-                {formatCurrency(data.salesTrends.reduce((sum, day) => sum + day.total_revenue, 0))}
+                {formatCurrency(
+                  data.salesTrends.reduce((sum, day) => {
+                    const revenue = parseFloat(day.total_revenue) || 0;
+                    return sum + revenue;
+                  }, 0)
+                )}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Average Order Value</p>
               <p className="text-xl font-semibold text-gray-800">
-                {formatCurrency(data.salesTrends.reduce((sum, day) => sum + day.avg_order_value, 0) / data.salesTrends.length)}
+                {formatCurrency(
+                  data.salesTrends.length > 0
+                    ? data.salesTrends.reduce((sum, day) => {
+                        const avgValue = parseFloat(day.avg_order_value) || 0;
+                        return sum + (avgValue * day.total_orders);
+                      }, 0) / data.salesTrends.reduce((sum, day) => sum + day.total_orders, 0)
+                    : 0
+                )}
               </p>
             </div>
           </div>
@@ -191,9 +209,15 @@ const AdvancedAnalytics: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.salesTrends.slice().reverse()}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
+                <XAxis 
+                  dataKey="date" 
+                  tickFormatter={formatDate}
+                  interval={Math.floor(data.salesTrends.length / 5)}
+                />
                 <YAxis />
-                <Tooltip />
+                <Tooltip 
+                  labelFormatter={(label) => formatDate(label as string)}
+                />
                 <Legend />
                 <Line type="monotone" dataKey="total_revenue" stroke="#0088FE" name="Revenue" />
               </LineChart>
