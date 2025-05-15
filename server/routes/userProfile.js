@@ -70,7 +70,44 @@ router.put('/profile',
     body('state_province').trim().isLength({ max: 100 }).optional(),
     body('country').trim().isLength({ max: 100 }).optional(),
     body('postal_code').trim().isLength({ max: 20 }).optional(),
-    body('bio').trim().isLength({ max: 500 }).optional()
+    body('bio').trim().isLength({ max: 500 }).optional(),
+    body('date_of_birth').optional().custom(value => {
+      if (!value) return true;
+      
+      console.log('Validating date_of_birth:', value);
+      
+      // Try to parse the date string to a valid Date object
+      let dateObj;
+      
+      // Check if the date is in DD/MM/YYYY format
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value)) {
+        const [day, month, year] = value.split('/').map(Number);
+        // Note: JS months are 0-based, so subtract 1 from month
+        dateObj = new Date(year, month - 1, day);
+        console.log(`Parsed DD/MM/YYYY format: ${day}/${month}/${year} to:`, dateObj);
+      } else {
+        // Use standard Date parsing for other formats
+        dateObj = new Date(value);
+      }
+      
+      if (isNaN(dateObj.getTime())) {
+        console.log('Invalid date - parsing failed');
+        throw new Error('Invalid date format');
+      }
+      
+      // Format the date as YYYY-MM-DD for database storage
+      // This is done in the service as well, but we validate it here first
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
+      
+      console.log('Date validation passed:', value);
+      console.log('Reformatted date:', formattedDate);
+      
+      return true;
+    }),
+    body('gender').optional().isIn(['male', 'female', 'other', 'prefer_not_to_say']).withMessage('Gender must be one of: male, female, other, prefer_not_to_say')
   ],
   async (req, res) => {
     try {
@@ -78,15 +115,48 @@ router.put('/profile',
         return res.status(401).json({ message: 'User not authenticated' });
       }
 
+      console.log('Profile update request received:');
+      console.log('User ID:', req.user.id);
+      console.log('Request body content type:', req.headers['content-type']);
+      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      
+      // Specifically log date and gender
+      console.log('Date of birth in request:', req.body.date_of_birth);
+      console.log('Gender in request:', req.body.gender);
+      
+      // Create explicit data object from request body
+      const profileData = {
+        first_name: req.body.first_name,
+        last_name: req.body.last_name,
+        phone_number: req.body.phone_number,
+        address: req.body.address,
+        city: req.body.city,
+        state_province: req.body.state_province,
+        country: req.body.country,
+        postal_code: req.body.postal_code,
+        bio: req.body.bio,
+        date_of_birth: req.body.date_of_birth,
+        gender: req.body.gender
+      };
+      
+      console.log('Processed profile data:', JSON.stringify(profileData, null, 2));
+
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        console.log('Validation errors:', JSON.stringify(errors.array(), null, 2));
         return res.status(400).json({ 
           message: 'Validation error',
           errors: errors.array() 
         });
       }
 
-      const profile = await UserProfileService.updateProfile(req.user.id, req.body);
+      // Get current profile for comparison
+      const currentProfile = await UserProfileService.getProfile(req.user.id);
+      console.log('Current profile:', JSON.stringify(currentProfile, null, 2));
+
+      const profile = await UserProfileService.updateProfile(req.user.id, profileData);
+      console.log('Updated profile:', JSON.stringify(profile, null, 2));
+      
       res.json(profile);
     } catch (error) {
       console.error('Update profile error:', error);

@@ -27,7 +27,15 @@ router.get('/status', authenticateToken, async (req: any, res) => {
 router.post('/setup', authenticateToken, async (req: any, res) => {
     try {
         const secret = speakeasy.generateSecret({
-            name: 'DOSE Pharmacy'
+            name: 'DOSE Pharmacy',
+            issuer: 'DOSE',
+            length: 20
+        });
+
+        console.log('Generated MFA secret:', {
+            base32: secret.base32,
+            otpauthUrl: secret.otpauth_url,
+            secretLength: secret.base32.length
         });
 
         const qrCode = await QRCode.toDataURL(secret.otpauth_url!);
@@ -39,6 +47,18 @@ router.post('/setup', authenticateToken, async (req: any, res) => {
              ON DUPLICATE KEY UPDATE mfa_secret = ?`,
             [req.user.id, secret.base32, secret.base32]
         );
+
+        // Verify the secret was stored correctly
+        const [storedSecret] = await pool.query(
+            'SELECT mfa_secret FROM user_mfa WHERE user_id = ?',
+            [req.user.id]
+        );
+
+        console.log('Stored MFA secret verification:', {
+            secretStored: storedSecret.length > 0,
+            storedSecretLength: storedSecret[0]?.mfa_secret?.length,
+            matches: storedSecret[0]?.mfa_secret === secret.base32
+        });
 
         res.json({
             secret: secret.base32,
@@ -85,17 +105,38 @@ router.post('/enable', authenticateToken, async (req: any, res) => {
 
         const secret = secrets[0].mfa_secret;
 
+        // Ensure token is properly formatted
+        const formattedToken = token.replace(/\s/g, '');
+        
+        console.log('Attempting token verification with:', {
+            tokenReceived: token,
+            formattedToken,
+            secretAvailable: !!secret,
+            secretLength: secret?.length
+        });
+
+        // Get the current valid token for comparison
+        const expectedToken = speakeasy.totp({
+            secret: secret,
+            encoding: 'base32'
+        });
+
         // Verify token
         const verified = speakeasy.totp.verify({
             secret: secret,
             encoding: 'base32',
-            token: token
+            token: formattedToken,
+            window: 2  // Allow 1 minute window (30 seconds before and after)
         });
 
-        console.log('Token verification result:', { 
-            verified, 
-            tokenProvided: token,
-            userId: req.user?.id
+        console.log('Token verification details:', { 
+            verified,
+            tokenProvided: formattedToken,
+            expectedToken,
+            userId: req.user?.id,
+            secretLength: secret?.length,
+            tokenLength: formattedToken?.length,
+            currentTime: new Date().toISOString()
         });
 
         if (!verified) {

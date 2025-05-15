@@ -29,8 +29,33 @@ const Profile = () => {
       try {
         setIsLoading(true);
         const response = await api.get('/user/profile');
-        setProfile(response.data);
-        reset(response.data);
+        
+        // Process the profile data to ensure date_of_birth is in the correct format
+        const profileData = { ...response.data };
+        
+        // If date_of_birth exists, convert to YYYY-MM-DD for the date input
+        if (profileData.date_of_birth) {
+          try {
+            // Handle date formats consistently
+            const dateObj = new Date(profileData.date_of_birth);
+            if (!isNaN(dateObj.getTime())) {
+              // Format as YYYY-MM-DD for the input element
+              const year = dateObj.getFullYear();
+              const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+              const day = String(dateObj.getDate()).padStart(2, '0');
+              profileData.date_of_birth = `${year}-${month}-${day}`;
+              
+              console.log('Formatted date for display:', profileData.date_of_birth);
+            }
+          } catch (error) {
+            console.error('Error formatting date:', error);
+          }
+        }
+        
+        console.log('Loaded profile data:', profileData);
+        
+        setProfile(profileData);
+        reset(profileData);
       } catch (error) {
         console.error('Error fetching profile:', error);
         showErrorAlert('Error', 'Failed to fetch profile');
@@ -44,17 +69,86 @@ const Profile = () => {
 
   const onSubmit = async (data: UserProfileFormData) => {
     try {
-      const response = await api.put('/user/profile', data);
-      setProfile(response.data);
+      // Create a copy of the data to avoid modifying the original
+      const formData = { ...data };
+      
+      // Format date_of_birth properly if it exists
+      if (formData.date_of_birth) {
+        const dateValue = formData.date_of_birth;
+        console.log('Original date value:', dateValue);
+        
+        // Make sure the date is in YYYY-MM-DD format
+        // The date input should already provide this format, but double-check
+        if (dateValue) {
+          try {
+            // Parse the date properly handling various input formats
+            let dateObj;
+            
+            // Check if the date is in DD/MM/YYYY format (European format)
+            if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateValue)) {
+              const [day, month, year] = dateValue.split('/').map(Number);
+              // Note: JS months are 0-based, so subtract 1 from month
+              dateObj = new Date(year, month - 1, day);
+              console.log(`Parsed European format date: ${day}/${month}/${year} to:`, dateObj);
+            } 
+            // Handle ISO format YYYY-MM-DD (from the date input)
+            else if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+              dateObj = new Date(dateValue);
+              console.log('Parsed ISO format date:', dateObj);
+            }
+            // Try standard JS Date parsing as fallback
+            else {
+              dateObj = new Date(dateValue);
+              console.log('Parsed date using standard parsing:', dateObj);
+            }
+            
+            if (!isNaN(dateObj.getTime())) {
+              // Format as YYYY-MM-DD
+              const year = dateObj.getFullYear();
+              const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+              const day = String(dateObj.getDate()).padStart(2, '0');
+              formData.date_of_birth = `${year}-${month}-${day}`;
+              
+              console.log('Formatted date value for submission:', formData.date_of_birth);
+            } else {
+              console.warn('Invalid date detected, using original value');
+            }
+          } catch (e) {
+            console.error('Error formatting date:', e);
+          }
+        }
+      }
+      
+      console.log('Submitting profile data:', formData);
+      console.log('Date of birth value:', formData.date_of_birth);
+      console.log('Gender value:', formData.gender);
+      
+      const response = await api.put('/user/profile', formData);
+      console.log('Profile update response:', response.data);
+      
+      setProfile({
+        ...response.data,
+        // Ensure the date is formatted correctly in the UI after update
+        date_of_birth: response.data.date_of_birth ? new Date(response.data.date_of_birth).toISOString().split('T')[0] : null
+      });
+      
       setIsEditing(false);
       showSuccessAlert('Success', 'Profile updated successfully');
     } catch (error: any) {
       console.error('Error updating profile:', error);
+      
+      // Log more detailed error information
+      console.error('Response data:', error.response?.data);
+      console.error('Status code:', error.response?.status);
+      
       if (error.response?.data?.errors) {
+        // Show detailed validation errors
         const validationErrors = error.response.data.errors
-          .map((err: any) => err.msg)
-          .join(', ');
+          .map((err: any) => `${err.param}: ${err.msg}`)
+          .join('\n');
         showErrorAlert('Validation Error', validationErrors);
+      } else if (error.response?.data?.message) {
+        showErrorAlert('Error', error.response.data.message);
       } else {
         showErrorAlert('Error', 'Failed to update profile');
       }
@@ -204,9 +298,22 @@ const Profile = () => {
                 </label>
                 <input
                   type="date"
-                  {...register('date_of_birth')}
                   disabled={!isEditing}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100"
+                  value={profile?.date_of_birth || ''}
+                  {...register('date_of_birth', {
+                    onChange: (e) => {
+                      const value = e.target.value;
+                      console.log('Date input changed:', value);
+                      
+                      if (profile) {
+                        setProfile({
+                          ...profile,
+                          date_of_birth: value
+                        });
+                      }
+                    }
+                  })}
                 />
                 {errors.date_of_birth && (
                   <p className="mt-1 text-sm text-red-600">{errors.date_of_birth.message}</p>

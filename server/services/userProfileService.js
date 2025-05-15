@@ -7,7 +7,33 @@ const UserProfileService = {
       'SELECT * FROM user_profiles WHERE user_id = ?',
       [userId]
     );
-    return rows[0] || null;
+    
+    if (rows.length === 0) {
+      return null;
+    }
+    
+    const profile = rows[0];
+    
+    // Format date_of_birth for client-side consumption
+    if (profile.date_of_birth) {
+      // Convert MySQL date format to consistent format for client
+      try {
+        // MySQL returns a Date object, convert it to a properly formatted string
+        if (profile.date_of_birth instanceof Date) {
+          const year = profile.date_of_birth.getFullYear();
+          const month = String(profile.date_of_birth.getMonth() + 1).padStart(2, '0');
+          const day = String(profile.date_of_birth.getDate()).padStart(2, '0');
+          
+          profile.date_of_birth = `${year}-${month}-${day}`;
+          console.log('Formatted date from DB to YYYY-MM-DD:', profile.date_of_birth);
+        }
+      } catch (error) {
+        console.error('Error formatting date in getProfile:', error);
+        // Keep original format if there's an error
+      }
+    }
+    
+    return profile;
   },
 
   // Ensure profile exists for user
@@ -36,10 +62,47 @@ const UserProfileService = {
       state_province = null,
       country = null,
       postal_code = null,
-      bio = null
+      bio = null,
+      date_of_birth = null,
+      gender = null
     } = profileData;
 
     await this.ensureProfileExists(userId);
+
+    // Ensure date is in proper format for MySQL
+    let formattedDateOfBirth = null;
+    if (date_of_birth) {
+      // Try to parse and format the date (YYYY-MM-DD)
+      try {
+        // Create a date object from the string
+        let dateObj;
+        
+        // Check if the date string is in DD/MM/YYYY format
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date_of_birth)) {
+          const [day, month, year] = date_of_birth.split('/').map(Number);
+          // Note: JS months are 0-based, so subtract 1 from month
+          dateObj = new Date(year, month - 1, day);
+          console.log(`Parsed DD/MM/YYYY format: ${day}/${month}/${year} to:`, dateObj);
+        } else {
+          // Use standard Date parsing for other formats
+          dateObj = new Date(date_of_birth);
+        }
+        
+        if (!isNaN(dateObj.getTime())) {
+          // Use local date methods to ensure correct values
+          const year = dateObj.getFullYear();
+          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(dateObj.getDate()).padStart(2, '0');
+          
+          formattedDateOfBirth = `${year}-${month}-${day}`;
+          console.log('Parsed and formatted date for database:', formattedDateOfBirth);
+        } else {
+          console.log('Invalid date provided (NaN):', date_of_birth);
+        }
+      } catch (error) {
+        console.error('Error formatting date:', error);
+      }
+    }
 
     // Update existing profile
     const [result] = await pool.query(
@@ -53,6 +116,8 @@ const UserProfileService = {
         country = ?,
         postal_code = ?,
         bio = ?,
+        date_of_birth = ?,
+        gender = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ?`,
       [
@@ -65,9 +130,15 @@ const UserProfileService = {
         country || null,
         postal_code || null,
         bio || null,
+        formattedDateOfBirth,
+        gender || null,
         userId
       ]
     );
+
+    console.log('Update query result:', result);
+    console.log('Used date value:', formattedDateOfBirth);
+    console.log('Used gender value:', gender);
 
     return this.getProfile(userId);
   },
