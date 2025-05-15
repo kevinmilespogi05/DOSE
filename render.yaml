@@ -4,7 +4,6 @@ services:
     name: pharmacy-api
     env: node
     region: ohio
-    plan: free
     buildCommand: npm install && npm run build
     startCommand: node dist/api/server.js
     envVars:
@@ -33,7 +32,6 @@ services:
   - type: web
     name: pharmacy-web
     env: static
-    plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     routes:
@@ -46,9 +44,8 @@ services:
       - key: VITE_NODE_ENV
         value: production
 
-# Note: Free tier doesn't include managed databases
-# You'll need to use an external database service with a free tier
-# like ElephantSQL or Supabase
+# Note: For database, consider using external services with free tiers
+# like ElephantSQL or Supabase that don't require payment information
 
 databases:
   - name: pharmacy-db
