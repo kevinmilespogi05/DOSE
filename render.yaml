@@ -4,7 +4,7 @@ services:
     name: pharmacy-api
     env: node
     region: ohio
-    plan: starter
+    plan: free
     buildCommand: npm install && npm run build
     startCommand: node dist/api/server.js
     envVars:
@@ -30,9 +30,8 @@ services:
         sync: false
 
   # Frontend service
-  - type: web
+  - type: static
     name: pharmacy-web
-    env: static
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     routes:
@@ -44,6 +43,10 @@ services:
         value: https://pharmacy-api.onrender.com # Update this with your actual API URL
       - key: VITE_NODE_ENV
         value: production
+
+# Note: Free tier doesn't include managed databases
+# You'll need to use an external database service with a free tier
+# like ElephantSQL or Supabase
 
 databases:
   - name: pharmacy-db
