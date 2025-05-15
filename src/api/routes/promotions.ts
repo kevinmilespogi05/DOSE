@@ -180,8 +180,16 @@ router.post('/',
         ...req.body,
         image_url: files?.image?.[0]?.path || null,
         banner_url: files?.banner?.[0]?.path || null,
-        applicable_products: req.body.applicable_products ? JSON.parse(req.body.applicable_products) : null,
-        terms_conditions: req.body.terms_conditions ? JSON.parse(req.body.terms_conditions) : null,
+        applicable_products: req.body.applicable_products ? 
+          (typeof req.body.applicable_products === 'string' && req.body.applicable_products.trim() !== '' ? 
+            JSON.parse(req.body.applicable_products) : 
+            null) : 
+          null,
+        terms_conditions: req.body.terms_conditions ? 
+          (typeof req.body.terms_conditions === 'string' && req.body.terms_conditions.trim() !== '' ? 
+            JSON.parse(req.body.terms_conditions) : 
+            null) : 
+          null,
         is_featured: req.body.is_featured === 'true',
         is_active: req.body.is_active === 'true',
         discount_percentage: req.body.discount_percentage || null,
@@ -199,8 +207,8 @@ router.post('/',
           promotionData.end_date,
           promotionData.image_url,
           promotionData.banner_url,
-          promotionData.applicable_products,
-          promotionData.terms_conditions,
+          promotionData.applicable_products ? JSON.stringify(promotionData.applicable_products) : null,
+          promotionData.terms_conditions ? JSON.stringify(promotionData.terms_conditions) : null,
           promotionData.is_featured,
           promotionData.is_active,
           promotionData.discount_percentage,
@@ -246,8 +254,16 @@ router.put('/:id',
         ...req.body,
         image_url: files?.image?.[0]?.path || existingPromotion[0].image_url,
         banner_url: files?.banner?.[0]?.path || existingPromotion[0].banner_url,
-        applicable_products: req.body.applicable_products ? JSON.parse(req.body.applicable_products) : existingPromotion[0].applicable_products,
-        terms_conditions: req.body.terms_conditions ? JSON.parse(req.body.terms_conditions) : existingPromotion[0].terms_conditions,
+        applicable_products: req.body.applicable_products ? 
+          (typeof req.body.applicable_products === 'string' && req.body.applicable_products.trim() !== '' ? 
+            JSON.parse(req.body.applicable_products) : 
+            existingPromotion[0].applicable_products) : 
+          existingPromotion[0].applicable_products,
+        terms_conditions: req.body.terms_conditions ? 
+          (typeof req.body.terms_conditions === 'string' && req.body.terms_conditions.trim() !== '' ? 
+            JSON.parse(req.body.terms_conditions) : 
+            existingPromotion[0].terms_conditions) : 
+          existingPromotion[0].terms_conditions,
         is_featured: req.body.is_featured === 'true',
         is_active: req.body.is_active === 'true',
         discount_percentage: req.body.discount_percentage || null,
@@ -264,8 +280,8 @@ router.put('/:id',
           promotionData.end_date,
           promotionData.image_url,
           promotionData.banner_url,
-          promotionData.applicable_products,
-          promotionData.terms_conditions,
+          promotionData.applicable_products ? JSON.stringify(promotionData.applicable_products) : null,
+          promotionData.terms_conditions ? JSON.stringify(promotionData.terms_conditions) : null,
           promotionData.is_featured,
           promotionData.is_active,
           promotionData.discount_percentage,

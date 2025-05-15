@@ -62,9 +62,9 @@ const PromotionBanner: React.FC = () => {
         {promotions.map((promotion) => (
           <SwiperSlide key={promotion.id}>
             <div className="relative">
-              {promotion.banner_url ? (
+              {(promotion.banner_url || promotion.image_url) ? (
                 <img 
-                  src={promotion.banner_url} 
+                  src={promotion.banner_url || promotion.image_url} 
                   alt={promotion.title} 
                   className="w-full h-64 md:h-80 object-cover"
                 />
@@ -87,9 +87,9 @@ const PromotionBanner: React.FC = () => {
                 </div>
               )}
 
-              {promotion.banner_url && (
-                <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center">
-                  <div className="text-white p-6 md:p-12 max-w-xl">
+              {(promotion.banner_url || promotion.image_url) && (
+                <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent flex items-center">
+                  <div className="text-white p-6 md:p-12 max-w-xl text-shadow">
                     <h2 className="text-2xl md:text-4xl font-bold mb-2">{promotion.title}</h2>
                     <p className="text-sm md:text-lg mb-4">{promotion.description}</p>
                     {(promotion.discount_percentage || promotion.discount_amount) && (

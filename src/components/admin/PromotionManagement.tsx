@@ -99,6 +99,11 @@ const PromotionManagement: React.FC = () => {
         if (value !== undefined && value !== null) {
           if (typeof value === 'boolean') {
             formDataToSend.append(key, value.toString());
+          } else if (key === 'applicable_products' || key === 'terms_conditions') {
+            // Ensure these are properly serialized arrays/objects
+            if (Array.isArray(value) || typeof value === 'object') {
+              formDataToSend.append(key, JSON.stringify(value));
+            }
           } else {
             formDataToSend.append(key, value.toString());
           }
@@ -115,16 +120,6 @@ const PromotionManagement: React.FC = () => {
       
       if (bannerInput.files && bannerInput.files.length > 0) {
         formDataToSend.append('banner', bannerInput.files[0]);
-      }
-      
-      // Add terms and conditions if present
-      if (formData.terms_conditions) {
-        formDataToSend.append('terms_conditions', JSON.stringify(formData.terms_conditions));
-      }
-      
-      // Add applicable products if present
-      if (formData.applicable_products) {
-        formDataToSend.append('applicable_products', JSON.stringify(formData.applicable_products));
       }
       
       if (selectedPromotion) {

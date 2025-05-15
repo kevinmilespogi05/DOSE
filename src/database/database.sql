@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 14, 2025 at 05:28 AM
+-- Generation Time: May 15, 2025 at 03:29 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -66,8 +66,8 @@ CREATE TABLE `cart_items` (
 
 INSERT INTO `cart_items` (`id`, `cart_id`, `medicine_id`, `quantity`, `created_at`, `updated_at`) VALUES
 (1, 2, 27, 1, '2025-05-12 17:03:06', '2025-05-12 17:03:06'),
-(2, 4, 30, 1, '2025-05-14 03:20:21', '2025-05-14 03:20:21'),
-(3, 4, 21, 1, '2025-05-14 03:20:27', '2025-05-14 03:20:27');
+(7, 4, 18, 1, '2025-05-14 16:34:50', '2025-05-15 02:12:48'),
+(8, 4, 27, 2, '2025-05-15 04:03:22', '2025-05-15 04:03:45');
 
 -- --------------------------------------------------------
 
@@ -91,6 +91,13 @@ CREATE TABLE `coupons` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `coupons`
+--
+
+INSERT INTO `coupons` (`id`, `code`, `discount_type`, `discount_value`, `min_purchase_amount`, `max_discount_amount`, `start_date`, `end_date`, `usage_limit`, `used_count`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'AAAA', 'percentage', 99.00, 1.00, 1.00, '2025-05-15 00:00:00', '2025-05-16 00:00:00', 1, 0, 1, '2025-05-14 17:19:51', '2025-05-14 17:19:51');
+
 -- --------------------------------------------------------
 
 --
@@ -107,6 +114,19 @@ CREATE TABLE `inventory_transactions` (
   `user_id` int(11) NOT NULL,
   `supplier_id` int(11) DEFAULT NULL,
   `unit_price` decimal(10,2) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `invoices`
+--
+
+CREATE TABLE `invoices` (
+  `id` varchar(255) NOT NULL,
+  `order_id` varchar(255) NOT NULL,
+  `pdf_data` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -135,30 +155,31 @@ CREATE TABLE `medicines` (
   `barcode` varchar(50) DEFAULT NULL,
   `stock_status` enum('in_stock','low_stock','out_of_stock') GENERATED ALWAYS AS (case when `stock_quantity` = 0 then 'out_of_stock' when `stock_quantity` <= `min_stock_level` then 'low_stock' else 'in_stock' end) STORED,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `average_rating` decimal(3,2) DEFAULT 0.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `medicines`
 --
 
-INSERT INTO `medicines` (`id`, `name`, `generic_name`, `brand`, `category_id`, `description`, `price`, `stock_quantity`, `unit`, `expiry_date`, `supplier_id`, `requires_prescription`, `min_stock_level`, `max_stock_level`, `reorder_point`, `image_url`, `barcode`, `created_at`, `updated_at`) VALUES
-(16, 'Cetirizine', 'Cetirizine', 'AllerCare', 4, NULL, 10.00, 27, 'tablets', '2027-11-15', 1, 1, 10, 100, 20, '/images/medicines/medicine-1742266313085.png', NULL, '2025-03-18 02:51:17', '2025-03-18 07:22:52'),
-(17, 'Omeprazole', 'Omeprazole', 'Omezol', 3, NULL, 15.00, 50, 'tablets', '2026-12-12', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267049716.png', NULL, '2025-03-18 03:04:09', '2025-03-18 03:05:16'),
-(18, 'Amoxicillin', 'Amoxicillin', 'AmoCare', 1, NULL, 25.00, 72, 'capsules', '2025-09-05', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267157362.png', NULL, '2025-03-18 03:05:57', '2025-03-18 07:22:52'),
-(19, 'Losartan', 'Losartan Potassium', 'CardioSafe', 6, NULL, 20.00, 40, 'tablets', '2027-11-15', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267241910.png', NULL, '2025-03-18 03:06:41', '2025-03-18 03:07:22'),
-(20, 'Paracetamol', 'Paracetamol', 'PainAway', 2, NULL, 5.00, 90, 'tablets', '2026-03-22', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267302037.png', NULL, '2025-03-18 03:08:22', '2025-03-18 03:08:22'),
-(21, 'Ascorbic Acid', 'Vitamin C', 'VitaBoost', 5, NULL, 12.00, 60, 'tablets', '2027-10-30', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742267346487.png', NULL, '2025-03-18 03:09:06', '2025-03-18 03:09:06'),
-(22, 'Multivitamins', 'Multivitamins', 'VitaComplete', 5, NULL, 20.00, 75, 'tablets', '2027-03-14', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267845660.png', NULL, '2025-03-18 03:17:25', '2025-03-18 03:17:25'),
-(23, 'Ferrous Sulfate', 'Iron Supplement', 'FerroStrong', 5, NULL, 18.00, 45, 'capsules', '2026-12-28', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267882304.png', NULL, '2025-03-18 03:18:02', '2025-03-18 03:18:02'),
-(24, 'Mefenamic Acid', 'Mefenamic Acid', 'Mefenax', 2, NULL, 12.00, 80, 'capsules', '2025-07-05', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742267932238.png', NULL, '2025-03-18 03:18:52', '2025-03-18 03:18:52'),
-(25, 'Ibuprofen', 'Ibuprofen', 'IbuRelief', 2, NULL, 8.00, 70, 'tablets', '2026-10-11', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267991905.png', NULL, '2025-03-18 03:19:52', '2025-03-18 03:19:52'),
-(26, 'Metoprolol', 'Metoprolol', 'BetaCare', 6, NULL, 18.00, 48, 'tablets', '2027-09-22', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742268044871.png', NULL, '2025-03-18 03:20:44', '2025-03-18 03:20:44'),
-(27, 'Amlodipine', 'Amlodipine', 'CardioTone', 4, NULL, 22.00, 3, 'capsules', '2003-05-11', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268082971.png', NULL, '2025-03-18 03:21:23', '2025-05-13 18:09:51'),
-(28, 'Loratadine', 'Loratadine', 'LoraFast', 4, NULL, 12.00, 35, 'tablets', '2026-11-15', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268137814.png', NULL, '2025-03-18 03:22:18', '2025-03-18 03:22:18'),
-(29, 'Cefalexin', 'Cefalexin', 'CefaPlus', 1, NULL, 28.00, 55, 'capsules', '2026-04-02', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742268186917.png', NULL, '2025-03-18 03:23:07', '2025-03-18 03:23:07'),
-(30, 'Azithromycin', 'Azithromycin', 'AzitroMed', 1, NULL, 30.00, 60, 'tablets', '2027-06-18', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268241000.png', NULL, '2025-03-18 03:24:01', '2025-03-18 03:24:01'),
-(31, 'Ranitidine', 'Ranitidine', 'RaniRelief', 3, NULL, 18.00, 45, 'tablets', '2025-08-20', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742268298639.png', NULL, '2025-03-18 03:24:58', '2025-03-18 03:24:58');
+INSERT INTO `medicines` (`id`, `name`, `generic_name`, `brand`, `category_id`, `description`, `price`, `stock_quantity`, `unit`, `expiry_date`, `supplier_id`, `requires_prescription`, `min_stock_level`, `max_stock_level`, `reorder_point`, `image_url`, `barcode`, `created_at`, `updated_at`, `average_rating`) VALUES
+(16, 'Cetirizine', 'Cetirizine', 'AllerCare', 4, NULL, 10.00, 27, 'tablets', '2027-11-15', 1, 1, 10, 100, 20, '/images/medicines/medicine-1742266313085.png', NULL, '2025-03-18 02:51:17', '2025-03-18 07:22:52', 0.00),
+(17, 'Omeprazole', 'Omeprazole', 'Omezol', 3, NULL, 15.00, 50, 'tablets', '2026-12-12', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267049716.png', NULL, '2025-03-18 03:04:09', '2025-03-18 03:05:16', 0.00),
+(18, 'Amoxicillin', 'Amoxicillin', 'AmoCare', 1, NULL, 25.00, 58, 'capsules', '2025-09-05', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267157362.png', NULL, '2025-03-18 03:05:57', '2025-05-14 16:53:35', 0.00),
+(19, 'Losartan', 'Losartan Potassium', 'CardioSafe', 6, NULL, 20.00, 40, 'tablets', '2027-11-15', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267241910.png', NULL, '2025-03-18 03:06:41', '2025-03-18 03:07:22', 0.00),
+(20, 'Paracetamol', 'Paracetamol', 'PainAway', 2, NULL, 5.00, 90, 'tablets', '2026-03-22', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267302037.png', NULL, '2025-03-18 03:08:22', '2025-03-18 03:08:22', 0.00),
+(21, 'Ascorbic Acid', 'Vitamin C', 'VitaBoost', 5, NULL, 12.00, 60, 'tablets', '2027-10-30', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742267346487.png', NULL, '2025-03-18 03:09:06', '2025-03-18 03:09:06', 0.00),
+(22, 'Multivitamins', 'Multivitamins', 'VitaComplete', 5, NULL, 20.00, 75, 'tablets', '2027-03-14', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267845660.png', NULL, '2025-03-18 03:17:25', '2025-03-18 03:17:25', 0.00),
+(23, 'Ferrous Sulfate', 'Iron Supplement', 'FerroStrong', 5, NULL, 18.00, 45, 'capsules', '2026-12-28', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267882304.png', NULL, '2025-03-18 03:18:02', '2025-03-18 03:18:02', 0.00),
+(24, 'Mefenamic Acid', 'Mefenamic Acid', 'Mefenax', 2, NULL, 12.00, 80, 'capsules', '2025-07-05', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742267932238.png', NULL, '2025-03-18 03:18:52', '2025-03-18 03:18:52', 0.00),
+(25, 'Ibuprofen', 'Ibuprofen', 'IbuRelief', 2, NULL, 8.00, 70, 'tablets', '2026-10-11', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267991905.png', NULL, '2025-03-18 03:19:52', '2025-03-18 03:19:52', 0.00),
+(26, 'Metoprolol', 'Metoprolol', 'BetaCare', 6, NULL, 18.00, 48, 'tablets', '2027-09-22', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742268044871.png', NULL, '2025-03-18 03:20:44', '2025-03-18 03:20:44', 0.00),
+(27, 'Amlodipine', 'Amlodipine', 'CardioTone', 4, NULL, 22.00, 1, 'capsules', '2003-05-11', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268082971.png', NULL, '2025-03-18 03:21:23', '2025-05-15 04:03:38', 4.25),
+(28, 'Loratadine', 'Loratadine', 'LoraFast', 4, NULL, 12.00, 35, 'tablets', '2026-11-15', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268137814.png', NULL, '2025-03-18 03:22:18', '2025-03-18 03:22:18', 0.00),
+(29, 'Cefalexin', 'Cefalexin', 'CefaPlus', 1, NULL, 28.00, 55, 'capsules', '2026-04-02', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742268186917.png', NULL, '2025-03-18 03:23:07', '2025-03-18 03:23:07', 0.00),
+(30, 'Azithromycin', 'Azithromycin', 'AzitroMed', 1, NULL, 30.00, 60, 'tablets', '2027-06-18', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268241000.png', NULL, '2025-03-18 03:24:01', '2025-03-18 03:24:01', 0.00),
+(31, 'Ranitidine', 'Ranitidine', 'RaniRelief', 3, NULL, 18.00, 45, 'tablets', '2025-08-20', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742268298639.png', NULL, '2025-03-18 03:24:58', '2025-03-18 03:24:58', 0.00);
 
 -- --------------------------------------------------------
 
@@ -226,6 +247,30 @@ CREATE TABLE `orders` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `orders`
+--
+
+INSERT INTO `orders` (`id`, `user_id`, `total_amount`, `status`, `payment_method`, `shipping_address`, `shipping_city`, `shipping_state`, `shipping_country`, `shipping_postal_code`, `shipping_method_id`, `shipping_cost`, `tax_amount`, `tracking_number`, `created_at`, `updated_at`) VALUES
+('077ae5ce-df5c-4d2a-914c-621a7d7e620e', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:42:58', '2025-05-14 16:42:58'),
+('0fa38b63-7a0c-45a8-b034-8cd56ac8f68f', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:46:12', '2025-05-14 16:46:12'),
+('1192cb53-919b-4bd2-addc-f07ba974a170', 8, 47.00, 'completed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-14 04:37:28', '2025-05-14 06:52:49'),
+('14f9f93c-de45-4cc5-bbaa-64f7aa9db283', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:40:19', '2025-05-14 16:40:19'),
+('28f35942-cb43-4aef-9ead-0e934ee56b42', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:40:39', '2025-05-14 16:40:39'),
+('42e9e8bd-ba53-407f-bd77-dea2a781a9f3', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:41:01', '2025-05-14 16:41:01'),
+('4acf4613-7008-44ea-b3d5-3e4587f87761', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:43:43', '2025-05-14 16:43:43'),
+('53882391-c98f-43aa-93d8-2884e2099784', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:40:05', '2025-05-14 16:40:05'),
+('5849cb66-93d0-4236-b111-997ca391ba6c', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:38:05', '2025-05-14 16:38:05'),
+('67af2a34-e8d7-431d-aeb1-c0cee9903177', 8, 42.00, 'pending_payment', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-14 04:30:49', '2025-05-14 04:30:49'),
+('67c5a565-0b88-44ff-988a-8ab4f46f54ce', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:53:35', '2025-05-14 16:53:35'),
+('7e2a80f8-1c6d-4a48-836a-67da2b706bed', 8, 42.00, 'completed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-14 04:32:50', '2025-05-14 04:33:45'),
+('b27f6b1e-8593-4510-89b3-6fe70de2d24a', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:44:44', '2025-05-14 16:44:44'),
+('b637fea4-5288-4b5a-91e3-53ddd391bc1e', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:35:06', '2025-05-14 16:35:06'),
+('bdae65c6-01df-4426-b6cc-8fd03711b68c', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:41:39', '2025-05-14 16:41:39'),
+('d077e12b-4783-41ca-8275-7d3e77e9c5b5', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:48:49', '2025-05-14 16:48:49'),
+('d10f2a67-832f-4cc3-902f-e88bc3c05e06', 8, 44100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:31:10', '2025-05-14 16:31:10'),
+('db578a0f-2153-477f-8e13-6ca3f9949802', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:46:27', '2025-05-14 16:46:27');
+
 -- --------------------------------------------------------
 
 --
@@ -257,6 +302,58 @@ CREATE TABLE `order_items` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `order_items`
+--
+
+INSERT INTO `order_items` (`id`, `order_id`, `medicine_id`, `name`, `unit`, `quantity`, `unit_price`, `created_at`) VALUES
+(1, '67af2a34-e8d7-431d-aeb1-c0cee9903177', 30, '', '', 1, 30.00, '2025-05-14 04:30:49'),
+(2, '67af2a34-e8d7-431d-aeb1-c0cee9903177', 21, '', '', 1, 12.00, '2025-05-14 04:30:49'),
+(3, '7e2a80f8-1c6d-4a48-836a-67da2b706bed', 30, '', '', 1, 30.00, '2025-05-14 04:32:50'),
+(4, '7e2a80f8-1c6d-4a48-836a-67da2b706bed', 21, '', '', 1, 12.00, '2025-05-14 04:32:50'),
+(5, '1192cb53-919b-4bd2-addc-f07ba974a170', 27, '', '', 1, 22.00, '2025-05-14 04:37:28'),
+(6, '1192cb53-919b-4bd2-addc-f07ba974a170', 18, '', '', 1, 25.00, '2025-05-14 04:37:28'),
+(7, 'd10f2a67-832f-4cc3-902f-e88bc3c05e06', 27, 'Amlodipine', 'capsules', 2, 22.00, '2025-05-14 16:31:10'),
+(8, 'b637fea4-5288-4b5a-91e3-53ddd391bc1e', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:35:06'),
+(9, '5849cb66-93d0-4236-b111-997ca391ba6c', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:38:05'),
+(10, '53882391-c98f-43aa-93d8-2884e2099784', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:40:05'),
+(11, '14f9f93c-de45-4cc5-bbaa-64f7aa9db283', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:40:19'),
+(12, '28f35942-cb43-4aef-9ead-0e934ee56b42', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:40:39'),
+(13, '42e9e8bd-ba53-407f-bd77-dea2a781a9f3', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:41:01'),
+(14, 'bdae65c6-01df-4426-b6cc-8fd03711b68c', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:41:39'),
+(15, '077ae5ce-df5c-4d2a-914c-621a7d7e620e', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:42:58'),
+(16, '4acf4613-7008-44ea-b3d5-3e4587f87761', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:43:43'),
+(17, 'b27f6b1e-8593-4510-89b3-6fe70de2d24a', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:44:44'),
+(18, '0fa38b63-7a0c-45a8-b034-8cd56ac8f68f', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:46:12'),
+(19, 'db578a0f-2153-477f-8e13-6ca3f9949802', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:46:27'),
+(20, 'd077e12b-4783-41ca-8275-7d3e77e9c5b5', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:48:49'),
+(21, '67c5a565-0b88-44ff-988a-8ab4f46f54ce', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-14 16:53:35');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `order_tracking`
+--
+
+CREATE TABLE `order_tracking` (
+  `id` varchar(255) NOT NULL,
+  `order_id` varchar(255) NOT NULL,
+  `status` varchar(50) NOT NULL,
+  `description` text NOT NULL,
+  `location` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `order_tracking`
+--
+
+INSERT INTO `order_tracking` (`id`, `order_id`, `status`, `description`, `location`, `created_at`) VALUES
+('1747198825493', '1192cb53-919b-4bd2-addc-f07ba974a170', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-14 05:00:25'),
+('1747198825498', '1192cb53-919b-4bd2-addc-f07ba974a170', 'shipping', 'Your order is on the way!', 'Dispatch Center', '2025-05-14 05:00:25'),
+('67af2a34-e8d7-431d-aeb1-c0cee9903177-1747197370', '67af2a34-e8d7-431d-aeb1-c0cee9903177', 'pending', 'Order is pending payment', NULL, '2025-05-14 04:36:10'),
+('7e2a80f8-1c6d-4a48-836a-67da2b706bed-1747197370', '7e2a80f8-1c6d-4a48-836a-67da2b706bed', 'delivered', 'Order has been delivered successfully', NULL, '2025-05-14 04:36:10');
+
 -- --------------------------------------------------------
 
 --
@@ -274,8 +371,21 @@ CREATE TABLE `payments` (
   `payment_proof_url` varchar(255) DEFAULT NULL,
   `status` enum('pending','processing','paid','failed','cancelled') NOT NULL DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `invoice_number` varchar(50) DEFAULT NULL,
+  `invoice_generated_at` timestamp NULL DEFAULT NULL,
+  `invoice_path` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `payments`
+--
+
+INSERT INTO `payments` (`id`, `order_id`, `amount`, `payment_method`, `source_id`, `payment_intent_id`, `reference_number`, `payment_proof_url`, `status`, `created_at`, `updated_at`, `invoice_number`, `invoice_generated_at`, `invoice_path`) VALUES
+('1747197177590', '7e2a80f8-1c6d-4a48-836a-67da2b706bed', 42.00, 'gcash', 'src_tVX1MV61V7u2AiseY24H5sEh', NULL, NULL, NULL, 'paid', '2025-05-14 04:32:57', '2025-05-14 06:05:06', 'INV-202505-1747197177590', '2025-05-14 06:05:06', 'C:\\Users\\kevin\\Desktop\\DOSE\\uploads\\invoices\\invoice-INV-202505-1747197177590.pdf'),
+('1747197177600', '7e2a80f8-1c6d-4a48-836a-67da2b706bed', 42.00, 'gcash', 'src_tVX1MV61V7u2AiseY24H5sEh', NULL, NULL, NULL, 'processing', '2025-05-14 04:32:57', '2025-05-14 04:32:57', NULL, NULL, NULL),
+('1747197455156', '1192cb53-919b-4bd2-addc-f07ba974a170', 47.00, 'gcash', 'src_FNsJooz87aFFTkyTwtyyKf9Y', NULL, NULL, NULL, 'paid', '2025-05-14 04:37:35', '2025-05-14 06:08:11', 'INV-202505-1747197455156', '2025-05-14 06:08:11', 'C:\\Users\\kevin\\Desktop\\DOSE\\uploads\\invoices\\invoice-INV-202505-1747197455156.pdf'),
+('1747197455164', '1192cb53-919b-4bd2-addc-f07ba974a170', 47.00, 'gcash', 'src_FNsJooz87aFFTkyTwtyyKf9Y', NULL, NULL, NULL, 'processing', '2025-05-14 04:37:35', '2025-05-14 04:37:35', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -328,6 +438,40 @@ CREATE TABLE `product_reviews` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `promotions`
+--
+
+CREATE TABLE `promotions` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text NOT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `banner_url` varchar(255) DEFAULT NULL,
+  `promotion_type` varchar(50) NOT NULL DEFAULT 'general',
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `discount_percentage` decimal(5,2) DEFAULT NULL,
+  `discount_amount` decimal(10,2) DEFAULT NULL,
+  `is_featured` tinyint(1) DEFAULT 0,
+  `is_active` tinyint(1) DEFAULT 1,
+  `applicable_products` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`applicable_products`)),
+  `terms_conditions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`terms_conditions`)),
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `promotions`
+--
+
+INSERT INTO `promotions` (`id`, `title`, `description`, `image_url`, `banner_url`, `promotion_type`, `start_date`, `end_date`, `discount_percentage`, `discount_amount`, `is_featured`, `is_active`, `applicable_products`, `terms_conditions`, `created_at`, `updated_at`) VALUES
+(1, 'Kevin', 'awww', 'uploads\\promotions\\55a46dfb-464b-4407-b081-5b5c64531579.jpg', 'uploads\\promotions\\0bf09b45-0020-4e48-80aa-21660676a64b.jpg', 'flash_sale', '2025-05-15', '2025-06-15', 1.00, 1.00, 1, 1, '\"\\\"[]\\\"\"', '\"\\\"{}\\\"\"', '2025-05-14 18:12:02', '2025-05-14 18:12:02'),
+(2, 'Kevin', 'asd', 'uploads\\promotions\\5f4e5d33-7402-4c98-9acc-ae995a43299c.png', 'uploads\\promotions\\00d6c0a0-c252-4481-869d-a9fd1e0fb258.png', 'product_specific', '2025-05-15', '2025-06-17', 1.00, 111.00, 1, 1, '\"\\\"[]\\\"\"', '\"\\\"{}\\\"\"', '2025-05-14 18:15:21', '2025-05-14 18:15:21'),
+(3, 'Alden Tongue', 'VHinz ', 'uploads\\promotions\\d9272323-de40-4d3e-8d1b-c90b352459f0.png', 'uploads\\promotions\\47c2a4cf-547d-45eb-a518-aa08a60553a2.png', 'general', '2025-05-15', '2025-06-15', 1.00, 0.01, 1, 1, '\"[]\"', '\"{}\"', '2025-05-15 13:11:04', '2025-05-15 13:11:04');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `ratings`
 --
 
@@ -338,15 +482,23 @@ CREATE TABLE `ratings` (
   `rating` int(11) NOT NULL CHECK (`rating` >= 1 and `rating` <= 5),
   `review` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `is_verified_purchase` tinyint(1) DEFAULT 0,
+  `status` enum('pending','approved','rejected') DEFAULT 'pending',
+  `moderated_by` int(11) DEFAULT NULL,
+  `moderation_date` timestamp NULL DEFAULT NULL,
+  `moderation_reason` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `ratings`
 --
 
-INSERT INTO `ratings` (`id`, `user_id`, `medicine_id`, `rating`, `review`, `created_at`, `updated_at`) VALUES
-(1, 8, 27, 5, 'wow', '2025-05-14 03:27:27', '2025-05-14 03:27:27');
+INSERT INTO `ratings` (`id`, `user_id`, `medicine_id`, `rating`, `review`, `created_at`, `updated_at`, `is_verified_purchase`, `status`, `moderated_by`, `moderation_date`, `moderation_reason`) VALUES
+(2, 8, 27, 5, 'awdawdawd', '2025-05-14 03:29:46', '2025-05-15 03:16:12', 0, 'approved', NULL, NULL, NULL),
+(5, 8, 27, 5, 'wadawd', '2025-05-14 03:47:36', '2025-05-15 03:16:12', 0, 'approved', NULL, NULL, NULL),
+(6, 8, 27, 5, 'omg', '2025-05-15 04:03:26', '2025-05-15 04:03:26', 1, 'approved', NULL, NULL, NULL),
+(7, 8, 27, 2, 'nononon', '2025-05-15 04:03:38', '2025-05-15 04:03:38', 1, 'approved', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -382,6 +534,13 @@ CREATE TABLE `returns` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `returns`
+--
+
+INSERT INTO `returns` (`id`, `order_id`, `user_id`, `status`, `reason`, `total_refund_amount`, `created_at`, `updated_at`) VALUES
+(2, '7e2a80f8-1c6d-4a48-836a-67da2b706bed', 8, 'pending', NULL, 42.00, '2025-05-14 06:17:55', '2025-05-14 06:17:55');
+
 -- --------------------------------------------------------
 
 --
@@ -394,10 +553,18 @@ CREATE TABLE `return_items` (
   `order_item_id` int(11) NOT NULL,
   `quantity` int(11) NOT NULL,
   `reason` text DEFAULT NULL,
-  `condition` enum('new','opened','damaged') NOT NULL,
+  `item_condition` varchar(255) NOT NULL,
   `refund_amount` decimal(10,2) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `return_items`
+--
+
+INSERT INTO `return_items` (`id`, `return_id`, `order_item_id`, `quantity`, `reason`, `item_condition`, `refund_amount`, `created_at`) VALUES
+(1, 2, 3, 1, 'damaged', 'opened', 30.00, '2025-05-14 06:17:55'),
+(2, 2, 4, 1, 'wrong_item', 'opened', 12.00, '2025-05-14 06:17:55');
 
 -- --------------------------------------------------------
 
@@ -428,6 +595,15 @@ CREATE TABLE `shipping_methods` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `shipping_methods`
+--
+
+INSERT INTO `shipping_methods` (`id`, `name`, `base_cost`, `estimated_days`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Standard Shipping', 100.00, 5, 1, '2025-05-14 16:07:23', '2025-05-14 16:07:23'),
+(2, 'Express Shipping', 200.00, 2, 1, '2025-05-14 16:07:23', '2025-05-14 16:07:23'),
+(3, 'Same Day Delivery', 350.00, 1, 1, '2025-05-14 16:07:23', '2025-05-14 16:07:23');
 
 -- --------------------------------------------------------
 
@@ -538,7 +714,7 @@ CREATE TABLE `user_mfa` (
 --
 
 INSERT INTO `user_mfa` (`id`, `user_id`, `mfa_secret`, `is_enabled`, `backup_codes`, `created_at`, `updated_at`) VALUES
-(1, 7, 'FY4EGRJUKV4VCJR6EFTTC2BRJNRVIR2LGYZVUI2TGEZCSQSOO5XQ', 1, '[\"1732VT3S\",\"7RQWICEZ\",\"OPJAKMCA\",\"Y1Z64MXM\",\"GHBZ4FDB\",\"BHV9XJC6\",\"OGO67JJP\",\"7EMZB58A\",\"3AARFJP3\",\"TF1DEYU0\"]', '2025-05-13 14:44:48', '2025-05-13 14:45:06');
+(1, 7, 'HRHSC6LXPF6SCS3TENTT4L35IVDE2MJSJEQX2SB6O4ZDCJL3K5GA', 0, '[\"1732VT3S\",\"7RQWICEZ\",\"OPJAKMCA\",\"Y1Z64MXM\",\"GHBZ4FDB\",\"BHV9XJC6\",\"OGO67JJP\",\"7EMZB58A\",\"3AARFJP3\",\"TF1DEYU0\"]', '2025-05-13 14:44:48', '2025-05-15 13:08:34');
 
 -- --------------------------------------------------------
 
@@ -569,7 +745,8 @@ CREATE TABLE `user_profiles` (
 INSERT INTO `user_profiles` (`id`, `user_id`, `first_name`, `last_name`, `phone_number`, `address`, `city`, `state_province`, `country`, `postal_code`, `bio`, `created_at`, `updated_at`) VALUES
 (100, 3, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-13 18:03:32', '2025-05-13 18:03:32'),
 (102, 4, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-13 18:04:23', '2025-05-13 18:04:23'),
-(122, 8, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-14 02:18:51', '2025-05-14 02:18:51');
+(122, 8, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-14 02:18:51', '2025-05-14 02:18:51'),
+(493, 7, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-15 13:00:28', '2025-05-15 13:00:28');
 
 -- --------------------------------------------------------
 
@@ -652,6 +829,13 @@ ALTER TABLE `inventory_transactions`
   ADD KEY `idx_inventory_date` (`transaction_date`);
 
 --
+-- Indexes for table `invoices`
+--
+ALTER TABLE `invoices`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `order_id` (`order_id`);
+
+--
 -- Indexes for table `medicines`
 --
 ALTER TABLE `medicines`
@@ -706,10 +890,18 @@ ALTER TABLE `order_items`
   ADD KEY `idx_order_items_medicine` (`medicine_id`);
 
 --
+-- Indexes for table `order_tracking`
+--
+ALTER TABLE `order_tracking`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `order_id` (`order_id`);
+
+--
 -- Indexes for table `payments`
 --
 ALTER TABLE `payments`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `invoice_number` (`invoice_number`),
   ADD KEY `order_id` (`order_id`);
 
 --
@@ -738,12 +930,20 @@ ALTER TABLE `product_reviews`
   ADD KEY `idx_reviews_status` (`status`);
 
 --
+-- Indexes for table `promotions`
+--
+ALTER TABLE `promotions`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `ratings`
 --
 ALTER TABLE `ratings`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_user_medicine` (`user_id`,`medicine_id`),
-  ADD KEY `medicine_id` (`medicine_id`);
+  ADD KEY `ratings_ibfk_1` (`user_id`),
+  ADD KEY `fk_ratings_moderated_by` (`moderated_by`),
+  ADD KEY `idx_ratings_status` (`status`),
+  ADD KEY `idx_ratings_medicine_status` (`medicine_id`,`status`);
 
 --
 -- Indexes for table `refunds`
@@ -856,13 +1056,13 @@ ALTER TABLE `cart`
 -- AUTO_INCREMENT for table `cart_items`
 --
 ALTER TABLE `cart_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `coupons`
 --
 ALTER TABLE `coupons`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `inventory_transactions`
@@ -898,7 +1098,7 @@ ALTER TABLE `order_coupons`
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `prescriptions`
@@ -919,10 +1119,16 @@ ALTER TABLE `product_reviews`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `promotions`
+--
+ALTER TABLE `promotions`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
 -- AUTO_INCREMENT for table `ratings`
 --
 ALTER TABLE `ratings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `refunds`
@@ -934,13 +1140,13 @@ ALTER TABLE `refunds`
 -- AUTO_INCREMENT for table `returns`
 --
 ALTER TABLE `returns`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `return_items`
 --
 ALTER TABLE `return_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `sessions`
@@ -952,7 +1158,7 @@ ALTER TABLE `sessions`
 -- AUTO_INCREMENT for table `shipping_methods`
 --
 ALTER TABLE `shipping_methods`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `suppliers`
@@ -976,13 +1182,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `user_mfa`
 --
 ALTER TABLE `user_mfa`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `user_profiles`
 --
 ALTER TABLE `user_profiles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=207;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=494;
 
 --
 -- AUTO_INCREMENT for table `wishlist`
@@ -1022,6 +1228,12 @@ ALTER TABLE `inventory_transactions`
   ADD CONSTRAINT `inventory_transactions_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
 
 --
+-- Constraints for table `invoices`
+--
+ALTER TABLE `invoices`
+  ADD CONSTRAINT `invoices_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `medicines`
 --
 ALTER TABLE `medicines`
@@ -1056,6 +1268,12 @@ ALTER TABLE `order_items`
   ADD CONSTRAINT `order_items_order_fk` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE;
 
 --
+-- Constraints for table `order_tracking`
+--
+ALTER TABLE `order_tracking`
+  ADD CONSTRAINT `order_tracking_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `payments`
 --
 ALTER TABLE `payments`
@@ -1085,6 +1303,7 @@ ALTER TABLE `product_reviews`
 -- Constraints for table `ratings`
 --
 ALTER TABLE `ratings`
+  ADD CONSTRAINT `fk_ratings_moderated_by` FOREIGN KEY (`moderated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `ratings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `ratings_ibfk_2` FOREIGN KEY (`medicine_id`) REFERENCES `medicines` (`id`) ON DELETE CASCADE;
 

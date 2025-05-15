@@ -122,6 +122,9 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files from public directory
 app.use(express.static('public'));
 
+// Serve files from uploads directory
+app.use('/uploads', express.static('uploads'));
+
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/mfa', mfaRoutes);
