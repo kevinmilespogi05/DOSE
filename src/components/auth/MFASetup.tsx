@@ -48,13 +48,47 @@ const MFASetup: React.FC = () => {
 
   const onSubmit = async (data: MFACredentials) => {
     try {
-      const response = await api.post('/mfa/enable', data);
+      // Make sure the token is formatted correctly (exactly 6 digits)
+      const token = data.token.trim();
+      
+      // Validate token format before sending to server
+      if (!/^\d{6}$/.test(token)) {
+        showErrorAlert('Error', 'Token must be exactly 6 digits');
+        return;
+      }
+
+      console.log('Submitting token data:', { token });
+      
+      // Check if token is available in localStorage
+      const authToken = localStorage.getItem('token');
+      if (!authToken) {
+        console.error('Authentication token not found in localStorage');
+        showErrorAlert('Error', 'You are not authenticated. Please log in again.');
+        return;
+      }
+
+      // Make the API call with the properly formatted token
+      const response = await api.post('/mfa/enable', { token });
+      
       setBackupCodes(response.data.backupCodes);
       setIsEnabled(true);
       showSuccessAlert('Success', 'MFA enabled successfully');
     } catch (error) {
       console.error('MFA enable error:', error);
-      showErrorAlert('Error', 'Failed to enable MFA');
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        console.error('Error response headers:', error.response.headers);
+        
+        // Show specific error message from server if available
+        const errorMessage = error.response.data?.message || 'Unknown error';
+        showErrorAlert('Error', `Failed to enable MFA: ${errorMessage}`);
+      } else if (error.request) {
+        console.error('Error request:', error.request);
+        showErrorAlert('Error', 'No response received from server. Please check your connection.');
+      } else {
+        showErrorAlert('Error', `Request error: ${error.message}`);
+      }
     }
   };
 

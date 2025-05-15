@@ -33,7 +33,7 @@ const MFAVerification: React.FC<MFAVerificationProps> = ({ email, onSuccess }) =
     try {
       const response = await api.post('/auth/verify-mfa', {
         email,
-        token: data.token,
+        otp: data.token,
       });
       onSuccess(response.data.token);
     } catch (error) {

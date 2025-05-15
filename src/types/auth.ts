@@ -6,7 +6,7 @@ export const loginSchema = z.object({
 });
 
 export const mfaTokenSchema = z.object({
-  token: z.string().min(6, 'Code must be at least 6 characters').max(8, 'Code must be at most 8 characters')
+  token: z.string().length(6, 'Code must be exactly 6 digits').regex(/^\d+$/, 'Code must contain only numbers')
 });
 
 export const backupCodeSchema = z.object({

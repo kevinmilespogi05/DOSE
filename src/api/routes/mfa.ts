@@ -54,6 +54,18 @@ router.post('/setup', authenticateToken, async (req: any, res) => {
 router.post('/enable', authenticateToken, async (req: any, res) => {
     try {
         const { token } = req.body;
+        
+        console.log('MFA enable request received:', { 
+            userId: req.user?.id,
+            requestBody: req.body,
+            hasToken: !!token
+        });
+
+        // Validate token exists
+        if (!token) {
+            console.error('Token missing in request body for user:', req.user?.id);
+            return res.status(400).json({ message: 'Token is required' });
+        }
 
         // Get user's secret
         const [secrets] = await pool.query(
@@ -61,7 +73,13 @@ router.post('/enable', authenticateToken, async (req: any, res) => {
             [req.user.id]
         );
 
+        console.log('MFA secrets query result:', { 
+            secretsFound: secrets.length > 0,
+            userId: req.user?.id
+        });
+
         if (secrets.length === 0) {
+            console.error('MFA not set up for user:', req.user?.id);
             return res.status(400).json({ message: 'MFA not set up' });
         }
 
@@ -74,7 +92,14 @@ router.post('/enable', authenticateToken, async (req: any, res) => {
             token: token
         });
 
+        console.log('Token verification result:', { 
+            verified, 
+            tokenProvided: token,
+            userId: req.user?.id
+        });
+
         if (!verified) {
+            console.error('Invalid token provided by user:', req.user?.id);
             return res.status(400).json({ message: 'Invalid token' });
         }
 
@@ -91,6 +116,8 @@ router.post('/enable', authenticateToken, async (req: any, res) => {
              WHERE user_id = ?`,
             [JSON.stringify(backupCodes), req.user.id]
         );
+
+        console.log('MFA successfully enabled for user:', req.user?.id);
 
         res.json({
             message: 'MFA enabled successfully',

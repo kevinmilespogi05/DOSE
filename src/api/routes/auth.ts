@@ -257,12 +257,14 @@ router.post('/verify-mfa-login',
 
       // First check if the user exists and has MFA enabled
       const [users] = await pool.query(
-        'SELECT u.id, u.email, u.role, m.mfa_secret FROM users u LEFT JOIN user_mfa m ON u.id = m.user_id WHERE u.email = ?',
+        'SELECT u.id, u.email, u.password_hash, u.role, m.mfa_secret FROM users u ' +
+        'LEFT JOIN user_mfa m ON u.id = m.user_id ' +
+        'WHERE u.email = ? AND m.is_enabled = 1',
         [email]
       );
 
       if (!users || users.length === 0) {
-        return res.status(400).json({ message: 'User not found' });
+        return res.status(400).json({ message: 'User not found or MFA not enabled' });
       }
 
       const user = users[0];
@@ -284,7 +286,7 @@ router.post('/verify-mfa-login',
       if (verified) {
         const token = jwt.sign(
           { userId: user.id, role: user.role },
-          process.env.JWT_SECRET || 'your_jwt_secret',
+          CONFIG.JWT_SECRET,
           { expiresIn: '24h' }
         );
         res.json({
@@ -311,9 +313,12 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     console.log('Login attempt for:', email);
 
-    // Get user from database
+    // Get user from database with MFA info
     const [users] = await pool.query(
-      'SELECT id, email, password_hash, role FROM users WHERE email = ?',
+      'SELECT u.id, u.email, u.password_hash, u.role, m.is_enabled as mfa_enabled, m.mfa_secret ' +
+      'FROM users u ' +
+      'LEFT JOIN user_mfa m ON u.id = m.user_id ' +
+      'WHERE u.email = ?',
       [email]
     );
 
@@ -330,7 +335,17 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Create token with user role
+    // Check if MFA is enabled for this user
+    if (user.mfa_enabled) {
+      console.log('MFA is enabled for user:', email);
+      return res.json({
+        requiresMFA: true,
+        email: user.email,
+        message: 'MFA verification required'
+      });
+    }
+
+    // If MFA is not enabled, create token and proceed with login
     const token = jwt.sign(
       { 
         userId: user.id,
@@ -357,11 +372,14 @@ router.post('/login', async (req, res) => {
 // Verify MFA token
 router.post('/verify-mfa', async (req, res) => {
     try {
-        const { email, token } = req.body;
+        const { email, otp } = req.body;
+        console.log('Processing standalone MFA verification for email:', email.slice(0, 3) + '...');
 
         // Get user and MFA details
         const [users] = await pool.query(
-            'SELECT u.id, u.email, u.role, m.mfa_secret FROM users u JOIN user_mfa m ON u.id = m.user_id WHERE u.email = ? AND m.is_enabled = true',
+            'SELECT u.id, u.email, u.role, m.mfa_secret FROM users u ' +
+            'JOIN user_mfa m ON u.id = m.user_id ' +
+            'WHERE u.email = ? AND m.is_enabled = 1',
             [email]
         );
 
@@ -375,21 +393,25 @@ router.post('/verify-mfa', async (req, res) => {
         const verified = speakeasy.totp.verify({
             secret: user.mfa_secret,
             encoding: 'base32',
-            token: token
+            token: otp,
+            window: 2 // Allow 1 minute window
         });
+
+        console.log('Standalone MFA verification result:', verified);
 
         if (!verified) {
             return res.status(400).json({ message: 'Invalid MFA token' });
         }
 
         // Generate JWT token
-        const jwtToken = jwt.sign(
-            { userId: user.id },
-            process.env.JWT_SECRET || 'your_jwt_secret'
+        const token = jwt.sign(
+            { userId: user.id, role: user.role },
+            CONFIG.JWT_SECRET,
+            { expiresIn: '24h' }
         );
 
         res.json({
-            token: jwtToken,
+            token,
             user: {
                 id: user.id,
                 email: user.email,
