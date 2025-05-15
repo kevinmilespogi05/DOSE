@@ -123,7 +123,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
 // Serve files from uploads directory
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static('public/uploads'));
 
 // Special handling for order returns - this needs to be before the route declarations
 app.use((req, res, next) => {
