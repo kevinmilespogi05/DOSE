@@ -1,108 +1,120 @@
-const db = require('../config/db');
+import pool from '../config/database.js';
 
 class ReviewService {
   async getReviewsByMedicineId(medicineId) {
-    return db('reviews')
-      .select(
-        'reviews.*',
-        'users.first_name',
-        'users.last_name'
-      )
-      .join('users', 'reviews.user_id', 'users.id')
-      .where('medicine_id', medicineId)
-      .orderBy('created_at', 'desc');
+    return pool.query(
+      `SELECT r.*, u.first_name, u.last_name
+       FROM reviews r
+       JOIN users u ON r.user_id = u.id
+       WHERE r.medicine_id = ?
+       ORDER BY r.created_at DESC`,
+      [medicineId]
+    ).then(([rows]) => rows);
   }
 
   async createReview(userId, medicineId, rating, comment) {
     // Check if user has purchased the medicine
     const hasPurchased = await this.hasUserPurchasedMedicine(userId, medicineId);
 
-    const [review] = await db('reviews')
-      .insert({
-        user_id: userId,
-        medicine_id: medicineId,
-        rating,
-        comment,
-        is_verified_purchase: hasPurchased
-      })
-      .returning('*');
+    const [result] = await pool.query(
+      `INSERT INTO reviews (user_id, medicine_id, rating, comment, is_verified_purchase)
+       VALUES (?, ?, ?, ?, ?)`,
+      [userId, medicineId, rating, comment, hasPurchased]
+    );
 
     // Update medicine's average rating
     await this.updateMedicineAverageRating(medicineId);
 
-    return this.getReviewWithUserDetails(review.id);
+    return this.getReviewWithUserDetails(result.insertId);
   }
 
   async updateReview(reviewId, userId, rating, comment) {
-    const [review] = await db('reviews')
-      .where({ id: reviewId, user_id: userId })
-      .update({ rating, comment })
-      .returning('*');
+    const [result] = await pool.query(
+      `UPDATE reviews SET rating = ?, comment = ?
+       WHERE id = ? AND user_id = ?`,
+      [rating, comment, reviewId, userId]
+    );
 
-    if (!review) {
+    if (result.affectedRows === 0) {
       throw new Error('Review not found or unauthorized');
     }
+
+    // Get the medicine_id for the updated review
+    const [[review]] = await pool.query(
+      'SELECT medicine_id FROM reviews WHERE id = ?',
+      [reviewId]
+    );
 
     // Update medicine's average rating
     await this.updateMedicineAverageRating(review.medicine_id);
 
-    return this.getReviewWithUserDetails(review.id);
+    return this.getReviewWithUserDetails(reviewId);
   }
 
   async deleteReview(reviewId, userId) {
-    const review = await db('reviews')
-      .where({ id: reviewId, user_id: userId })
-      .first();
+    // Get the review first to check authorization and get medicine_id
+    const [[review]] = await pool.query(
+      'SELECT * FROM reviews WHERE id = ? AND user_id = ?',
+      [reviewId, userId]
+    );
 
     if (!review) {
       throw new Error('Review not found or unauthorized');
     }
 
-    await db('reviews')
-      .where({ id: reviewId })
-      .delete();
+    await pool.query(
+      'DELETE FROM reviews WHERE id = ?',
+      [reviewId]
+    );
 
     // Update medicine's average rating
     await this.updateMedicineAverageRating(review.medicine_id);
   }
 
   async hasUserPurchasedMedicine(userId, medicineId) {
-    const purchase = await db('order_items')
-      .join('orders', 'order_items.order_id', 'orders.id')
-      .where({
-        'orders.user_id': userId,
-        'order_items.medicine_id': medicineId,
-        'orders.status': 'completed'
-      })
-      .first();
+    const [rows] = await pool.query(
+      `SELECT 1 FROM order_items oi
+       JOIN orders o ON oi.order_id = o.id
+       WHERE o.user_id = ? AND oi.medicine_id = ? AND o.status = 'completed'
+       LIMIT 1`,
+      [userId, medicineId]
+    );
 
-    return !!purchase;
+    return rows.length > 0;
   }
 
   async updateMedicineAverageRating(medicineId) {
-    const result = await db('reviews')
-      .where('medicine_id', medicineId)
-      .avg('rating as average_rating')
-      .first();
+    const [[result]] = await pool.query(
+      `SELECT AVG(rating) as average_rating
+       FROM reviews
+       WHERE medicine_id = ?`,
+      [medicineId]
+    );
 
-    await db('medicines')
-      .where('id', medicineId)
-      .update({
-        average_rating: result.average_rating || 0
-      });
+    await pool.query(
+      `UPDATE medicines
+       SET average_rating = ?
+       WHERE id = ?`,
+      [result.average_rating || 0, medicineId]
+    );
   }
 
   async getReviewWithUserDetails(reviewId) {
-    return db('reviews')
-      .select(
-        'reviews.*',
-        'users.first_name',
-        'users.last_name'
-      )
-      .join('users', 'reviews.user_id', 'users.id')
-      .where('reviews.id', reviewId)
-      .first();
+    const [[review]] = await pool.query(
+      `SELECT r.*, u.first_name, u.last_name
+       FROM reviews r
+       JOIN users u ON r.user_id = u.id
+       WHERE r.id = ?`,
+      [reviewId]
+    );
+
+    return review;
   }
 }
 
-module.exports = new ReviewService(); 
+const reviewService = new ReviewService();
+export { reviewService as default };
+export function getReviewsByMedicineId(medicineId) { return reviewService.getReviewsByMedicineId(medicineId); }
+export function createReview(userId, medicineId, rating, comment) { return reviewService.createReview(userId, medicineId, rating, comment); }
+export function updateReview(reviewId, userId, rating, comment) { return reviewService.updateReview(reviewId, userId, rating, comment); }
+export function deleteReview(reviewId, userId) { return reviewService.deleteReview(reviewId, userId); } 

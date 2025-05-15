@@ -5,8 +5,7 @@ import pool from '../config/database.js';
 import { body, validationResult } from 'express-validator';
 import nodemailer from 'nodemailer';
 import speakeasy from 'speakeasy';
-import { db } from '../../src/database/connection';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -59,6 +58,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt for email:', email);
     
     const [users] = await pool.query(
       'SELECT * FROM users WHERE email = ?',
@@ -66,11 +66,25 @@ router.post('/login', async (req, res) => {
     );
 
     if (users.length === 0) {
+      console.log('No user found with email:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const user = users[0];
+    console.log('User found:', { 
+      id: user.id, 
+      email: user.email,
+      hasPassword: !!user.password,
+      passwordLength: user.password ? user.password.length : 0
+    });
+
+    if (!user.password) {
+      console.error('User has no password stored');
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
     const validPassword = await bcrypt.compare(password, user.password);
+    console.log('Password validation result:', validPassword);
 
     if (!validPassword) {
       return res.status(401).json({ message: 'Invalid credentials' });
@@ -110,7 +124,7 @@ router.post('/forgot-password', [
     const resetToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
     
     // Update user with reset token
-    await db.query(
+    await pool.query(
       'UPDATE users SET reset_token = ?, reset_token_expires = DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE email = ?',
       [resetToken, email]
     );
@@ -137,7 +151,7 @@ router.post('/reset-password', [
     const { token, newPassword } = req.body;
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    const [user] = await db.query(
+    const [[user]] = await pool.query(
       'SELECT * FROM users WHERE email = ? AND reset_token = ? AND reset_token_expires > NOW()',
       [decoded.email, token]
     );
@@ -147,7 +161,7 @@ router.post('/reset-password', [
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await db.query(
+    await pool.query(
       'UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE email = ?',
       [hashedPassword, decoded.email]
     );
@@ -161,7 +175,7 @@ router.post('/reset-password', [
 router.post('/enable-mfa', authenticateToken, async (req, res) => {
   try {
     const secret = speakeasy.generateSecret();
-    await db.query(
+    await pool.query(
       'UPDATE users SET mfa_secret = ? WHERE id = ?',
       [secret.base32, req.user.id]
     );
@@ -178,7 +192,7 @@ router.post('/enable-mfa', authenticateToken, async (req, res) => {
 router.post('/verify-mfa', authenticateToken, async (req, res) => {
   try {
     const { token } = req.body;
-    const [user] = await db.query('SELECT mfa_secret FROM users WHERE id = ?', [req.user.id]);
+    const [[user]] = await pool.query('SELECT mfa_secret FROM users WHERE id = ?', [req.user.id]);
 
     const verified = speakeasy.totp.verify({
       secret: user.mfa_secret,
@@ -187,7 +201,7 @@ router.post('/verify-mfa', authenticateToken, async (req, res) => {
     });
 
     if (verified) {
-      await db.query('UPDATE users SET mfa_enabled = TRUE WHERE id = ?', [req.user.id]);
+      await pool.query('UPDATE users SET mfa_enabled = TRUE WHERE id = ?', [req.user.id]);
       res.json({ message: 'MFA enabled successfully' });
     } else {
       res.status(400).json({ error: 'Invalid MFA token' });
@@ -201,7 +215,7 @@ router.post('/login-mfa', async (req, res) => {
   try {
     const { email, password, mfaToken } = req.body;
     
-    const [user] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+    const [[user]] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
     if (!user || !await bcrypt.compare(password, user.password)) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -222,6 +236,31 @@ router.post('/login-mfa', async (req, res) => {
     res.json({ token });
   } catch (error) {
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Temporary endpoint to force reset password - REMOVE AFTER USE
+router.post('/reset-password-force', async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+    
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    // Update the user's password
+    const [result] = await pool.query(
+      'UPDATE users SET password = ? WHERE email = ?',
+      [hashedPassword, email]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ message: 'Password reset successful' });
+  } catch (error) {
+    console.error('Force password reset error:', error);
+    res.status(500).json({ message: 'Error resetting password' });
   }
 });
 

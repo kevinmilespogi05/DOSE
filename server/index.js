@@ -7,8 +7,8 @@ import dotenv from 'dotenv';
 import pool from './config/database.js';
 import mfaRoutes from './routes/mfa.js';
 import { authenticateToken } from './middleware/auth.js';
-const reviewRoutes = require('./routes/reviews');
-const wishlistRoutes = require('./routes/wishlist');
+import reviewRoutes from './routes/reviews.js';
+import wishlistRoutes from './routes/wishlist.js';
 
 // Load environment variables first
 dotenv.config();
@@ -40,22 +40,22 @@ const initializeServer = async () => {
 
     // Import routes after database is initialized
     const authRoutes = await import('./routes/auth.js');
-    const carRoutes = await import('./routes/cars.js');
-    const bookingRoutes = await import('./routes/bookings.js');
-    const chatRoutes = await import('./routes/chat.js');
     const orderRoutes = await import('./routes/orders.js');
     const paymentRoutes = await import('./routes/payments.js');
     const userProfileRoutes = await import('./routes/userProfile.js');
+    const usersRoutes = await import('./routes/users.js');
+    const inventoryRoutes = await import('./routes/inventory.js');
+    const chatRoutes = await import('./routes/chat.js');
 
     // Routes
     app.use('/api/auth', authRoutes.default);
     app.use('/api/mfa', mfaRoutes);
     app.use('/api/user-profile', authenticateToken, userProfileRoutes.default);
-    app.use('/api/cars', authenticateToken, carRoutes.default);
-    app.use('/api/bookings', authenticateToken, bookingRoutes.default);
+    app.use('/api/users', authenticateToken, usersRoutes.default);
     app.use('/api/chat', authenticateToken, chatRoutes.default);
     app.use('/api/orders', authenticateToken, orderRoutes.default);
     app.use('/api/payments', authenticateToken, paymentRoutes.default);
+    app.use('/api/inventory', authenticateToken, inventoryRoutes.default);
     app.use('/api', reviewRoutes);
     app.use('/api', wishlistRoutes);
 

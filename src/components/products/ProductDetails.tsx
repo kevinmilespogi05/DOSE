@@ -4,9 +4,8 @@ import { Star, ArrowLeft, ShoppingCart, Heart, Share2, AlertTriangle, Check, Fil
 import axios from 'axios';
 import { useCart } from '../../context/CartContext';
 import { formatPeso } from '../../utils/currency';
-
-// Configure axios defaults
-axios.defaults.baseURL = 'http://localhost:3000';  // Update this to match your backend URL
+import RatingDisplay from '../RatingDisplay';
+import RatingForm from '../RatingForm';
 
 interface Medicine {
   id: number;
@@ -38,12 +37,13 @@ const ProductDetails = () => {
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [refreshRatings, setRefreshRatings] = useState(0);
 
   useEffect(() => {
     const fetchMedicine = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get(`/api/medicines/${id}`, {
+        const response = await axios.get(`/medicines/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -70,7 +70,7 @@ const ProductDetails = () => {
     
     setAddingToCart(true);
     try {
-      await axios.post('/api/cart/items', {
+      await axios.post('/cart/items', {
         medicine_id: medicine.id,
         quantity: quantity
       }, {
@@ -299,6 +299,22 @@ const ProductDetails = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Ratings and Reviews Section */}
+      <div className="mt-12 mb-8">
+        {medicine && (
+          <>
+            <RatingDisplay 
+              medicineId={medicine.id} 
+              key={`display-${refreshRatings}`} 
+            />
+            <RatingForm 
+              medicineId={medicine.id} 
+              onRatingSubmitted={() => setRefreshRatings(prev => prev + 1)} 
+            />
+          </>
+        )}
       </div>
     </div>
   );

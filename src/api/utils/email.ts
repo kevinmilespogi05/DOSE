@@ -5,8 +5,8 @@ const transporter = nodemailer.createTransport({
   port: 465,
   secure: true,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD?.replace(/\s+/g, ''),
+    user: process.env.EMAIL_USER || 'placeholder@example.com',
+    pass: process.env.EMAIL_PASSWORD?.replace(/\s+/g, '') || 'placeholder',
   },
   tls: {
     rejectUnauthorized: false
@@ -29,10 +29,16 @@ interface EmailOptions {
   html?: string;
 }
 
-export const sendEmail = async ({ to, subject, text, html }: EmailOptions) => {
+export const sendEmail = async (to: string, subject: string, text?: string, html?: string) => {
   try {
+    // Validate email address exists
+    if (!to) {
+      console.warn('No recipient email provided. Skipping email sending.');
+      return { messageId: 'email-skipped', success: false };
+    }
+
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: process.env.EMAIL_USER || 'noreply@pharmacy.com',
       to,
       subject,
       text,
@@ -45,6 +51,7 @@ export const sendEmail = async ({ to, subject, text, html }: EmailOptions) => {
     return info;
   } catch (error) {
     console.error('Email sending error:', error);
-    throw error;
+    // Return a success object instead of throwing to prevent order creation failure
+    return { messageId: 'email-failed', success: false, error };
   }
 }; 

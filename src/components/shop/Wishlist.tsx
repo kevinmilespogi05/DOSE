@@ -38,9 +38,9 @@ const Wishlist = () => {
   }, []);
 
   const fetchWishlist = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const response = await api.get('/user/wishlist');
+      const response = await api.get('/wishlist');
       setWishlistItems(response.data);
     } catch (err) {
       console.error('Error fetching wishlist:', err);
@@ -53,7 +53,7 @@ const Wishlist = () => {
   const removeFromWishlist = async (medicineId: number) => {
     setRemovingFromWishlist(medicineId);
     try {
-      await api.delete(`/user/wishlist/${medicineId}`);
+      await api.delete(`/wishlist/${medicineId}`);
       setWishlistItems(prev => prev.filter(item => item.id !== medicineId));
     } catch (err) {
       console.error('Failed to remove from wishlist:', err);

@@ -6,6 +6,7 @@ import { formatPeso } from '../../utils/currency';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../utils/api';
 import RatingModal from './RatingModal';
+import PromotionBanner from './PromotionBanner';
 
 interface Medicine {
   id: number;
@@ -97,7 +98,7 @@ const Shop = () => {
       // If user is logged in, fetch wishlist status for all medicines
       if (user) {
         try {
-          const wishlistResponse = await api.get('/user/wishlist');
+          const wishlistResponse = await api.get('/wishlist');
           
           // Create a Set of medicine IDs from the wishlist response
           const wishlistItems = new Set(wishlistResponse.data.map((item: any) => {
@@ -238,7 +239,7 @@ const Shop = () => {
       if (!medicine) return;
 
       // Check current wishlist status before toggling
-      const checkResponse = await api.get(`/user/wishlist/check/${medicineId}`);
+      const checkResponse = await api.get(`/wishlist/check/${medicineId}`);
       const isCurrentlyInWishlist = checkResponse.data.isInWishlist;
 
       // Only proceed if the current status is different from what we think it is
@@ -259,23 +260,9 @@ const Shop = () => {
       ));
 
       if (isCurrentlyInWishlist) {
-        await api.delete(`/user/wishlist/${medicineId}`);
+        await api.delete(`/wishlist/${medicineId}`);
       } else {
-        try {
-          await api.post('/user/wishlist', { medicine_id: medicineId });
-        } catch (error: any) {
-          // If we get a 409, it means the item is already in the wishlist
-          // Just update our local state to match
-          if (error.response?.status === 409) {
-            setMedicines(prev => prev.map(m => 
-              m.id === medicineId 
-                ? { ...m, is_in_wishlist: true }
-                : m
-            ));
-            return;
-          }
-          throw error;
-        }
+        await api.post('/wishlist', { medicine_id: medicineId });
       }
     } catch (error: any) {
       console.error('Failed to update wishlist:', error);
@@ -284,7 +271,7 @@ const Shop = () => {
       if (medicine) {
         try {
           // Get the current wishlist status
-          const checkResponse = await api.get(`/user/wishlist/check/${medicineId}`);
+          const checkResponse = await api.get(`/wishlist/check/${medicineId}`);
           const isCurrentlyInWishlist = checkResponse.data.isInWishlist;
           
           setMedicines(prev => prev.map(m => 
@@ -347,19 +334,30 @@ const Shop = () => {
 
   return (
     <div className="p-2 sm:p-4 md:p-6 max-w-7xl mx-auto">
+      {/* Promotion Banner Component */}
+      <PromotionBanner />
+      
       <div className="mb-4 sm:mb-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Medicine Shop</h1>
             <p className="text-xs sm:text-sm text-gray-600 mt-1">Browse and purchase medicines</p>
           </div>
-          <button
-            onClick={viewCart}
-            className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
-          >
-            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span>View Cart</span>
-          </button>
+          <div className="flex space-x-3">
+            <Link 
+              to="/promotions"
+              className="text-blue-600 hover:text-blue-800 text-sm sm:text-base underline"
+            >
+              View All Promotions
+            </Link>
+            <button
+              onClick={viewCart}
+              className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+            >
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>View Cart</span>
+            </button>
+          </div>
         </div>
       </div>
 

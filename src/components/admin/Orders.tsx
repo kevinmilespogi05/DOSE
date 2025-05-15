@@ -38,7 +38,7 @@ const Orders: React.FC = () => {
           throw new Error('No authentication token found');
         }
 
-        const response = await axios.get('/api/admin/orders', {
+        const response = await axios.get('/admin/orders', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -88,7 +88,7 @@ const Orders: React.FC = () => {
           throw new Error('No authentication token found');
         }
 
-        await axios.put(`/api/admin/orders/${orderId}/status`, 
+        await axios.put(`/admin/orders/${orderId}/status`, 
           { status: newStatus },
           {
             headers: {

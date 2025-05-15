@@ -20,6 +20,50 @@ import cartRoutes from './routes/cart';
 import ratingRoutes from './routes/ratings';
 import orderRoutes from './routes/orders';
 import invoiceRoutes from './routes/invoices';
+import returnsRouter from './routes/admin/returns';
+import userReturnsRouter from './routes/returns';
+import adminRoutes from './routes/admin';
+import couponRoutes from './routes/coupons';
+import promotionsRoutes from './routes/promotions';
+import shippingRoutes from './routes/admin/shipping';
+import inventoryRouter from './routes/inventory';
+
+// Authentication middleware
+const authenticateToken = (req: any, res: any, next: any) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, CONFIG.JWT_SECRET, (err: any, user: any) => {
+    if (err) return res.sendStatus(403);
+    req.user = {
+      id: user.userId,
+      email: user.email,
+      role: user.role
+    };
+    next();
+  });
+};
+
+// Admin middleware
+const isAdmin = async (req: any, res: any, next: any) => {
+  try {
+    const users = await query(
+      'SELECT role FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    if (users.length === 0 || users[0].role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 
 // Initialize admin user
 async function initializeAdmin() {
@@ -80,15 +124,34 @@ app.use(express.static('public'));
 
 // Mount routes
 app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/user/wishlist', wishlistRoutes);
-app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/mfa', mfaRoutes);
-app.use('/api/paymongo', paymongoRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/admin/returns', returnsRouter);
+app.use('/api/returns', userReturnsRouter);
+app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use('/api/promotions', promotionsRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/admin/shipping', shippingRoutes);
+app.use('/api/inventory', inventoryRouter);
+
+// Special handling for order returns - this needs to be after the other route declarations
+app.use((req, res, next) => {
+  // Check if the request URL matches the pattern /api/orders/:orderId/returns
+  const match = req.url.match(/^\/api\/orders\/([^\/]+)\/returns$/);
+  if (match && req.method === 'POST') {
+    // Modify the URL to match the actual returns endpoint
+    const orderId = match[1];
+    req.url = `/api/returns/orders/${orderId}/returns`;
+    console.log(`[Returns Redirect] Redirecting to ${req.url}`);
+  }
+  next();
+});
 
 // In-memory storage (replace with a proper database in production)
 const users: any[] = [];
@@ -118,42 +181,62 @@ pool.query(`
   console.error('Error creating wishlist_items table:', error);
 });
 
-// Authentication middleware
-const authenticateToken = (req: any, res: any, next: any) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+// Add code to execute our rating review features migration
 
-  if (!token) return res.sendStatus(401);
-
-  jwt.verify(token, CONFIG.JWT_SECRET, (err: any, user: any) => {
-    if (err) return res.sendStatus(403);
-    req.user = {
-      id: user.userId,
-      email: user.email,
-      role: user.role
-    };
-    next();
-  });
-};
-
-// Admin middleware
-const isAdmin = async (req: any, res: any, next: any) => {
-  try {
-    const users = await query(
-      'SELECT role FROM users WHERE id = ?',
-      [req.user.id]
-    );
-
-    if (users.length === 0 || users[0].role !== 'admin') {
-      return res.status(403).json({ message: 'Admin access required' });
-    }
-
-    next();
-  } catch (error) {
-    console.error('Error checking admin status:', error);
-    res.status(500).json({ message: 'Server error' });
+// Create review features if they don't exist
+pool.query(`
+  -- Check if columns exist
+  SELECT COUNT(*) AS column_count
+  FROM information_schema.COLUMNS 
+  WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'ratings' 
+    AND COLUMN_NAME = 'is_verified_purchase'
+`).then((result: any) => {
+  const rowsAsArray = Array.isArray(result) ? result[0] : [result[0]];
+  const columnExists = rowsAsArray[0].column_count > 0;
+  
+  if (!columnExists) {
+    console.log('Adding review features to ratings table...');
+    
+    // Execute each statement separately to avoid SQL syntax errors
+    pool.query(`
+      -- Add verified purchase and moderation fields to ratings table
+      ALTER TABLE ratings
+      ADD COLUMN is_verified_purchase BOOLEAN DEFAULT FALSE,
+      ADD COLUMN status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+      ADD COLUMN moderated_by INT NULL,
+      ADD COLUMN moderation_date TIMESTAMP NULL,
+      ADD COLUMN moderation_reason VARCHAR(255) NULL,
+      ADD CONSTRAINT fk_ratings_moderated_by FOREIGN KEY (moderated_by) REFERENCES users(id) ON DELETE SET NULL
+    `).then(() => {
+      // Create first index
+      return pool.query(`
+        -- Create index for faster filtering of ratings by status
+        CREATE INDEX idx_ratings_status ON ratings(status)
+      `);
+    }).then(() => {
+      // Create second index
+      return pool.query(`
+        -- Create index for faster lookup of ratings by medicine and status
+        CREATE INDEX idx_ratings_medicine_status ON ratings(medicine_id, status)
+      `);
+    }).then(() => {
+      // Update existing ratings
+      return pool.query(`
+        -- Update existing ratings to be approved
+        UPDATE ratings SET status = 'approved'
+      `);
+    }).then(() => {
+      console.log('Rating review features added successfully');
+    }).catch(error => {
+      console.error('Error adding rating review features:', error);
+    });
+  } else {
+    console.log('Rating review features already exist');
   }
-};
+}).catch(error => {
+  console.error('Error checking for rating review features:', error);
+});
 
 // Auth routes
 app.post('/api/auth/register', async (req, res) => {
@@ -986,7 +1069,18 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
     connection = await pool.getConnection();
     console.log('Database connection established');
 
-    const { items, total_amount } = req.body;
+    const { 
+      items, 
+      total_amount, 
+      shipping_address,
+      shipping_city,
+      shipping_state,
+      shipping_country,
+      shipping_postal_code,
+      shipping_method_id,
+      shipping_cost,
+      tax_amount
+    } = req.body;
     const user_id = req.user.id;
 
     // Validate required fields
@@ -1001,6 +1095,22 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
       return res.status(400).json({
         error: 'Invalid total amount',
         details: 'Total amount must be a positive number'
+      });
+    }
+
+    // Validate shipping information
+    if (!shipping_address || !shipping_city || !shipping_state || !shipping_country || !shipping_postal_code) {
+      return res.status(400).json({
+        error: 'Invalid shipping information',
+        details: 'Complete shipping information is required'
+      });
+    }
+
+    // Validate shipping method
+    if (!shipping_method_id) {
+      return res.status(400).json({
+        error: 'Invalid shipping method',
+        details: 'A shipping method must be selected'
       });
     }
 
@@ -1022,54 +1132,118 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
     await connection.beginTransaction();
     console.log('Transaction started');
 
-    try {
-      // Insert order
-      const [orderResult] = await connection.execute(
-        'INSERT INTO orders (id, user_id, total_amount, status) VALUES (?, ?, ?, ?)',
-        [orderId, user_id, total_amount, 'pending_payment']
-      );
-      console.log('Order inserted:', orderResult);
+    // Verify the shipping method exists
+    const [shippingMethod] = await connection.query(
+      'SELECT id, name, base_cost FROM shipping_methods WHERE id = ? AND is_active = 1',
+      [shipping_method_id]
+    );
 
-      // Insert order items
-      for (const item of items) {
-        const [itemResult] = await connection.execute(
-          'INSERT INTO order_items (order_id, medicine_id, quantity, unit_price) VALUES (?, ?, ?, ?)',
-          [orderId, item.medicine_id, item.quantity, item.price_per_unit]
-        );
-        console.log('Order item inserted:', itemResult);
+    if (!shippingMethod.length) {
+      await connection.rollback();
+      return res.status(400).json({
+        error: 'Invalid shipping method',
+        details: 'The selected shipping method does not exist or is inactive'
+      });
+    }
+
+    // Insert the order
+    await connection.query(
+      `INSERT INTO orders (
+        id, user_id, total_amount, status, 
+        shipping_address, shipping_city, shipping_state, 
+        shipping_country, shipping_postal_code, 
+        shipping_method_id, shipping_cost, tax_amount
+      ) VALUES (?, ?, ?, 'pending_payment', ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        orderId, 
+        user_id, 
+        total_amount, 
+        shipping_address,
+        shipping_city,
+        shipping_state,
+        shipping_country,
+        shipping_postal_code,
+        shipping_method_id,
+        shipping_cost || shippingMethod[0].base_cost,
+        tax_amount || 0
+      ]
+    );
+    console.log('Order created in database');
+
+    // Process each item
+    for (const item of items) {
+      // Check if medicine exists and has enough stock
+      const [medicine] = await connection.query(
+        'SELECT id, name, unit, price, stock_quantity FROM medicines WHERE id = ? FOR UPDATE',
+        [item.medicine_id]
+      );
+
+      if (medicine.length === 0) {
+        await connection.rollback();
+        return res.status(400).json({
+          error: 'Invalid medicine',
+          details: `Medicine with ID ${item.medicine_id} does not exist`
+        });
       }
 
-      // Commit transaction
-      await connection.commit();
-      console.log('Transaction committed successfully');
+      if (medicine[0].stock_quantity < item.quantity) {
+        await connection.rollback();
+        return res.status(400).json({
+          error: 'Insufficient stock',
+          details: `Not enough stock for medicine: ${medicine[0].name}`
+        });
+      }
 
-      res.status(201).json({
-        orderId,
-        message: 'Order created successfully'
-      });
-    } catch (error) {
-      // Rollback transaction on error
-      await connection.rollback();
-      console.error('Error during transaction:', error);
-      throw error;
+      // Insert order item
+      await connection.query(
+        'INSERT INTO order_items (order_id, medicine_id, name, unit, quantity, unit_price) VALUES (?, ?, ?, ?, ?, ?)',
+        [
+          orderId,
+          item.medicine_id,
+          medicine[0].name,
+          medicine[0].unit,
+          item.quantity,
+          item.price_per_unit
+        ]
+      );
+      console.log(`Added item ${medicine[0].name} to order`);
+
+      // Update stock
+      await connection.query(
+        'UPDATE medicines SET stock_quantity = stock_quantity - ? WHERE id = ?',
+        [item.quantity, item.medicine_id]
+      );
+      console.log(`Updated stock for medicine ID ${item.medicine_id}`);
     }
+
+    // Commit the transaction
+    await connection.commit();
+    console.log('Transaction committed successfully');
+
+    res.status(201).json({
+      message: 'Order created successfully',
+      orderId: orderId
+    });
   } catch (error) {
     console.error('Error creating order:', error);
     
-    res.status(500).json({
-      error: 'Failed to create order',
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-  } finally {
-    // Release connection back to pool
     if (connection) {
       try {
-        await connection.release();
-        console.log('Connection released back to pool');
-      } catch (releaseError) {
-        console.error('Error releasing connection:', releaseError);
+        await connection.rollback();
+        console.log('Transaction rolled back due to error');
+      } catch (rollbackError) {
+        console.error('Error rolling back transaction:', rollbackError);
       }
+    }
+    
+    res.status(500).json({
+      error: 'Failed to create order',
+      details: error.message
+    });
+  } finally {
+    if (connection) {
+      connection.release();
+      console.log('Database connection released');
     }
   }
 });
@@ -1561,6 +1735,55 @@ app.get('/api/admin/dashboard', authenticateToken, isAdmin, async (req, res) => 
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
     res.status(500).json({ message: 'Error fetching dashboard data' });
+  }
+});
+
+// Shipping methods endpoint
+app.get('/api/shipping-methods', authenticateToken, async (req, res) => {
+  try {
+    const shippingMethods = await query(
+      `SELECT id, name, base_cost, estimated_days, is_active  
+       FROM shipping_methods
+       WHERE is_active = 1
+       ORDER BY base_cost ASC`
+    );
+    
+    res.json(shippingMethods);
+  } catch (error) {
+    console.error('Error fetching shipping methods:', error);
+    res.status(500).json({ message: 'Error fetching shipping methods' });
+  }
+});
+
+// Tax rates endpoint
+app.get('/api/tax-rates', authenticateToken, async (req, res) => {
+  try {
+    const { country, state } = req.query;
+    
+    if (!country) {
+      return res.status(400).json({ message: 'Country is required' });
+    }
+    
+    // Get tax rate for the country and state (with fallback to country-wide rate)
+    const taxRate = await query(
+      `SELECT id, country, state, rate 
+       FROM tax_rates
+       WHERE country = ? 
+       AND (state = ? OR state IS NULL)
+       AND is_active = 1
+       ORDER BY state IS NULL
+       LIMIT 1`,
+      [country, state || '']
+    );
+    
+    if (taxRate.length === 0) {
+      return res.json({ rate: 0 });
+    }
+    
+    res.json(taxRate[0]);
+  } catch (error) {
+    console.error('Error fetching tax rate:', error);
+    res.status(500).json({ message: 'Error fetching tax rate' });
   }
 });
 

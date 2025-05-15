@@ -3,7 +3,8 @@ import api from '../../lib/api';
 import { format } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Package, Download, Eye, X } from 'lucide-react';
+import { Package, Download, Eye, X, Star } from 'lucide-react';
+import RatingModal from './RatingModal';
 
 interface Order {
   id: string;
@@ -27,6 +28,8 @@ const OrderHistory = () => {
   const [error, setError] = useState('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  const [selectedMedicine, setSelectedMedicine] = useState<{id: number, name: string} | null>(null);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -96,6 +99,15 @@ const OrderHistory = () => {
     }
   };
 
+  const handleRateProduct = (medicineId: number, medicineName: string) => {
+    setSelectedMedicine({ id: medicineId, name: medicineName });
+    setIsRatingModalOpen(true);
+  };
+
+  const handleRatingSubmit = () => {
+    // Optionally refresh the orders or show a success message
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -149,6 +161,20 @@ const OrderHistory = () => {
         </div>
       )}
 
+      {/* Rating Modal */}
+      {isRatingModalOpen && selectedMedicine && (
+        <RatingModal
+          medicineId={selectedMedicine.id}
+          medicineName={selectedMedicine.name}
+          isOpen={isRatingModalOpen}
+          onClose={() => {
+            setIsRatingModalOpen(false);
+            setSelectedMedicine(null);
+          }}
+          onRatingSubmit={handleRatingSubmit}
+        />
+      )}
+
       {orders.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-gray-600">You haven't placed any orders yet.</p>
@@ -185,11 +211,23 @@ const OrderHistory = () => {
                 <h3 className="font-medium mb-2">Items:</h3>
                 <ul className="space-y-2">
                   {order.items && order.items.map((item) => (
-                    <li key={item.medicine_id} className="flex justify-between">
+                    <li key={item.medicine_id} className="flex justify-between items-center">
                       <span>{item.medicine_name}</span>
-                      <span>
-                        {item.quantity} × ₱{item.unit_price.toFixed(2)}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-gray-600">
+                          {item.quantity} × ₱{item.unit_price.toFixed(2)}
+                        </span>
+                        {/* Only show rate button for completed orders */}
+                        {order.status === 'completed' && (
+                          <button
+                            onClick={() => handleRateProduct(item.medicine_id, item.medicine_name)}
+                            className="flex items-center gap-1 text-sm px-2 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors"
+                          >
+                            <Star className="w-4 h-4" />
+                            Rate
+                          </button>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>

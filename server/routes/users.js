@@ -2,8 +2,8 @@ import express from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
 import { body } from 'express-validator';
-import { db } from '../../src/database/connection';
-import { authenticateToken } from '../middleware/auth';
+import pool from '../config/database.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -19,7 +19,7 @@ const upload = multer({
 // Get user profile
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
-    const [profile] = await db.query(
+    const [[profile]] = await pool.query(
       'SELECT u.email, u.name, p.* FROM users u LEFT JOIN user_profiles p ON u.id = p.user_id WHERE u.id = ?',
       [req.user.id]
     );
@@ -47,7 +47,7 @@ router.put('/profile', authenticateToken, upload.single('profile_picture'), asyn
     const { phone_number, address } = req.body;
     
     // Upsert profile data
-    await db.query(`
+    await pool.query(`
       INSERT INTO user_profiles (user_id, profile_picture, phone_number, address)
       VALUES (?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
@@ -73,7 +73,7 @@ router.put('/profile', authenticateToken, upload.single('profile_picture'), asyn
 // Wishlist routes
 router.get('/wishlist', authenticateToken, async (req, res) => {
   try {
-    const wishlist = await db.query(`
+    const wishlist = await pool.query(`
       SELECT p.*, w.created_at as added_at
       FROM wishlists w
       JOIN products p ON w.product_id = p.id
@@ -88,7 +88,7 @@ router.get('/wishlist', authenticateToken, async (req, res) => {
 
 router.post('/wishlist/:productId', authenticateToken, async (req, res) => {
   try {
-    await db.query(
+    await pool.query(
       'INSERT INTO wishlists (user_id, product_id) VALUES (?, ?)',
       [req.user.id, req.params.productId]
     );
@@ -104,7 +104,7 @@ router.post('/wishlist/:productId', authenticateToken, async (req, res) => {
 
 router.delete('/wishlist/:productId', authenticateToken, async (req, res) => {
   try {
-    await db.query(
+    await pool.query(
       'DELETE FROM wishlists WHERE user_id = ? AND product_id = ?',
       [req.user.id, req.params.productId]
     );
@@ -124,7 +124,7 @@ router.post('/reviews/:productId', [
     const { rating, comment } = req.body;
     
     // Check for verified purchase
-    const [order] = await db.query(`
+    const [[order]] = await pool.query(`
       SELECT 1 FROM orders o
       JOIN order_items oi ON o.id = oi.order_id
       WHERE o.user_id = ? AND oi.product_id = ? AND o.status = 'completed'
@@ -133,7 +133,7 @@ router.post('/reviews/:productId', [
 
     const isVerifiedPurchase = !!order;
 
-    await db.query(`
+    await pool.query(`
       INSERT INTO reviews (user_id, product_id, rating, comment, is_verified_purchase)
       VALUES (?, ?, ?, ?, ?)
     `, [req.user.id, req.params.productId, rating, comment, isVerifiedPurchase]);
@@ -146,7 +146,7 @@ router.post('/reviews/:productId', [
 
 router.get('/reviews/:productId', async (req, res) => {
   try {
-    const reviews = await db.query(`
+    const reviews = await pool.query(`
       SELECT r.*, u.name as user_name, u.email as user_email
       FROM reviews r
       JOIN users u ON r.user_id = u.id
@@ -166,7 +166,7 @@ router.put('/reviews/:reviewId/moderate', [
 ], async (req, res) => {
   try {
     // Check if user is admin
-    const [user] = await db.query(
+    const [[user]] = await pool.query(
       'SELECT role FROM users WHERE id = ?',
       [req.user.id]
     );
@@ -175,7 +175,7 @@ router.put('/reviews/:reviewId/moderate', [
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    await db.query(
+    await pool.query(
       'UPDATE reviews SET status = ? WHERE id = ?',
       [req.body.status, req.params.reviewId]
     );

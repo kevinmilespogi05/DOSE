@@ -1,24 +1,29 @@
 import axios from 'axios';
 
-const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
+// Configure axios defaults
+axios.defaults.baseURL = 'http://localhost:3000/api';
 
-// Add token to requests if it exists
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Add a request interceptor to include auth token
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 // Handle response errors
-api.interceptors.response.use(
-  (response) => response,
+axios.interceptors.response.use(
+  (response) => {
+    console.log(`API Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`);
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 
@@ -38,10 +43,10 @@ api.interceptors.response.use(
           if (response.data.token) {
             // Update the token
             localStorage.setItem('token', response.data.token);
-            api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+            axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
 
             // Retry the original request
-            return api(originalRequest);
+            return axios(originalRequest);
           }
         }
       } catch (refreshError) {
@@ -56,4 +61,6 @@ api.interceptors.response.use(
   }
 );
 
-export { api }; 
+// Export both as default and named export
+export const api = axios;
+export default axios; 

@@ -25,7 +25,7 @@ const Wishlist: React.FC = () => {
 
   const fetchWishlist = async () => {
     try {
-      const response = await api.get('/user/wishlist');
+      const response = await api.get('/wishlist');
       setWishlist(response.data);
     } catch (err) {
       setError('Failed to fetch wishlist');
@@ -36,7 +36,7 @@ const Wishlist: React.FC = () => {
 
   const removeFromWishlist = async (medicineId: number) => {
     try {
-      await api.delete(`/user/wishlist/${medicineId}`);
+      await api.delete(`/wishlist/${medicineId}`);
       setWishlist(prev => prev.filter(item => item.medicine_id !== medicineId));
     } catch (err) {
       setError('Failed to remove item from wishlist');

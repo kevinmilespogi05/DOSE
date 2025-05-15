@@ -22,47 +22,76 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Function to check if token is expired
+  const isTokenExpired = (token: string) => {
+    try {
+      const decoded = jwtDecode(token) as any;
+      const currentTime = Date.now() / 1000;
+      
+      if (!decoded.exp) return true; // No expiration means risky, treat as expired
+      return decoded.exp < currentTime;
+    } catch (error) {
+      console.error('Error decoding token:', error);
+      return true; // If we can't decode, assume it's expired
+    }
+  };
 
   // Check authentication status on mount
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          // Decode token to get user info
-          const decoded = jwtDecode(token) as { userId: number; role: string };
+      setLoading(true);
+      
+      if (!token) {
+        setUser(null);
+        setIsAuthenticated(false);
+        setLoading(false);
+        return;
+      }
+      
+      // Check if token is expired
+      if (isTokenExpired(token)) {
+        console.log('Token is expired, logging out');
+        localStorage.removeItem('token');
+        setUser(null);
+        setIsAuthenticated(false);
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        // Decode token to get user info
+        const decoded = jwtDecode(token) as { userId: number; role: string };
+        console.log('Token decoded successfully, role:', decoded.role);
 
-          // Verify token by fetching user profile
-          const response = await api.get('/user/profile', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          const userData = {
-            ...response.data,
-            role: decoded.role // Always use role from token
-          };
-          
-          setUser(userData);
-          setIsAuthenticated(true);
-          
-          // Redirect based on role
-          if (userData.role === 'admin') {
-            navigate('/admin');
-          } else {
-            navigate('/shop');
+        // Verify token by fetching user profile
+        const response = await api.get('/user/profile', {
+          headers: {
+            'Authorization': `Bearer ${token}`
           }
-        } catch (error) {
-          // If token is invalid, clear it
-          console.error('Auth check failed:', error);
-          localStorage.removeItem('token');
-          setUser(null);
-          setIsAuthenticated(false);
-          navigate('/login');
-          showErrorAlert('Session Expired', 'Please log in again');
-        }
+        });
+        
+        const userData = {
+          ...response.data,
+          role: decoded.role // Always use role from token
+        };
+        
+        setUser(userData);
+        setIsAuthenticated(true);
+        
+        console.log('User authenticated successfully as', userData.role);
+      } catch (error) {
+        // If token is invalid, clear it
+        console.error('Auth check failed:', error);
+        localStorage.removeItem('token');
+        setUser(null);
+        setIsAuthenticated(false);
+        showErrorAlert('Session Expired', 'Please log in again');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -84,7 +113,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (credentials: LoginFormData): Promise<LoginResponse> => {
     try {
+      console.log('Login attempt with credentials:', { 
+        email: credentials.email.substring(0, 3) + '...' // Only log part of email for privacy
+      });
+      
+      // Ensure we're using the correct API endpoint
       const response = await api.post<LoginResponse>('/auth/login', credentials);
+      console.log('Login response:', JSON.stringify({
+        status: response.status,
+        hasToken: !!response.data.token,
+        hasUser: !!response.data.user
+      }));
       
       if (response.data.requiresMFA) {
         return response.data;
@@ -95,7 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
         
         // Decode token to get user info
-        const decoded = jwtDecode(response.data.token) as { userId: number; role: string };
+        const decoded = jwtDecode(response.data.token) as { id: number; role: string };
+        console.log('Token decoded successfully, role:', decoded.role);
         
         const userData = {
           ...response.data.user,
@@ -104,11 +144,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setUser(userData);
         setIsAuthenticated(true);
+      } else {
+        console.error('No token in login response:', response.data);
       }
 
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
+      console.error('Error response:', error.response?.status, error.response?.data);
+      
+      if (error.response?.status === 401) {
+        // Clear any existing token on auth failure
+        localStorage.removeItem('token');
+        delete api.defaults.headers.common['Authorization'];
+      }
+      
       throw error;
     }
   };

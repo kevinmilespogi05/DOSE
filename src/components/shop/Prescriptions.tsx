@@ -28,7 +28,7 @@ const Prescriptions = () => {
   const fetchPrescriptions = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/prescriptions/user', {
+      const response = await axios.get('/prescriptions/user', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -65,7 +65,7 @@ const Prescriptions = () => {
       const formData = new FormData();
       formData.append('prescription', selectedFile);
 
-      const response = await axios.post('/api/prescriptions/upload', formData, {
+      const response = await axios.post('/prescriptions/upload', formData, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'multipart/form-data'

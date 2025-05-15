@@ -19,7 +19,7 @@ interface AuthenticatedRequest extends Request {
 }
 
 // Authentication middleware
-export const authenticateToken = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const isAuthenticated = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -77,6 +77,9 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
         return res.status(403).json({ message: 'Invalid or expired token' });
     }
 };
+
+// For backward compatibility
+export const authenticateToken = isAuthenticated;
 
 // Admin middleware
 export const isAdmin = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

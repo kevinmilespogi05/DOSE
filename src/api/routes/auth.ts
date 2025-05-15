@@ -307,60 +307,51 @@ router.post('/verify-mfa-login',
 
 // Login route
 router.post('/login', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        console.log('Login attempt for:', email);
+  try {
+    const { email, password } = req.body;
+    console.log('Login attempt for:', email);
 
-        // Get user from database
-        const [users] = await pool.query(
-            'SELECT u.id, u.email, u.password_hash, u.role, m.is_enabled as mfa_enabled, m.mfa_secret FROM users u LEFT JOIN user_mfa m ON u.id = m.user_id WHERE u.email = ?',
-            [email]
-        );
+    // Get user from database
+    const [users] = await pool.query(
+      'SELECT id, email, password_hash, role FROM users WHERE email = ?',
+      [email]
+    );
 
-        if (users.length === 0) {
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
-
-        const user = users[0];
-        const validPassword = await bcrypt.compare(password, user.password_hash);
-
-        if (!validPassword) {
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
-
-        // If MFA is enabled, don't generate token yet
-        if (user.mfa_enabled) {
-            return res.json({
-                requiresMFA: true,
-                email: user.email,
-                message: 'MFA verification required'
-            });
-        }
-
-        // If MFA is not enabled, generate and send token
-        const token = jwt.sign(
-            { 
-                userId: user.id,
-                role: user.role // Include role in token
-            },
-            CONFIG.JWT_SECRET,
-            { expiresIn: '24h' } // Add token expiration
-        );
-
-        console.log('Generated token payload:', { userId: user.id, role: user.role }); // For debugging
-
-        res.json({
-            token,
-            user: {
-                id: user.id,
-                email: user.email,
-                role: user.role
-            }
-        });
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ message: 'Error logging in' });
+    if (!users || users.length === 0) {
+      console.log('No user found with email:', email);
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
+
+    const user = users[0];
+    const validPassword = await bcrypt.compare(password, user.password_hash);
+
+    if (!validPassword) {
+      console.log('Invalid password for user:', email);
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // Create token with user role
+    const token = jwt.sign(
+      { 
+        userId: user.id,
+        role: user.role
+      }, 
+      CONFIG.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Error logging in' });
+  }
 });
 
 // Verify MFA token

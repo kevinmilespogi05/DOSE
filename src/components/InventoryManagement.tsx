@@ -36,9 +36,12 @@ const InventoryManagement: React.FC = () => {
 
   const fetchInventory = async () => {
     try {
+      console.log('Fetching inventory from /inventory/status');
       const response = await api.get('/inventory/status');
+      console.log('Inventory response:', response.data);
       setInventory(response.data);
     } catch (err) {
+      console.error('Error fetching inventory:', err);
       setError('Failed to fetch inventory');
     } finally {
       setLoading(false);

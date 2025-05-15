@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import { authenticateToken } from '../middleware/auth.js';
+import * as wishlistService from '../services/wishlistService.js';
+
 const router = express.Router();
-const wishlistService = require('../services/wishlistService');
-const { authenticateToken } = require('../middleware/auth');
 
 // Get user's wishlist
 router.get('/user/wishlist', authenticateToken, async (req, res) => {
@@ -70,4 +71,4 @@ router.get('/user/wishlist/check/:medicineId', authenticateToken, async (req, re
   }
 });
 
-module.exports = router; 
+export default router; 

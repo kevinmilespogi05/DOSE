@@ -23,7 +23,7 @@ const Users = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('/api/admin/users', {
+      const response = await axios.get('/admin/users', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -47,7 +47,7 @@ const Users = () => {
     if (result.isConfirmed) {
       showLoading('Deleting user...');
       try {
-        await axios.delete(`/api/admin/users/${userId}`, {
+        await axios.delete(`/admin/users/${userId}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }

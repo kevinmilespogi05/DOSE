@@ -1,79 +1,87 @@
-const db = require('../config/db');
+import pool from '../config/database.js';
 
 class WishlistService {
   async getWishlist(userId) {
-    return db('wishlist_items')
-      .select(
-        'wishlist_items.id',
-        'wishlist_items.created_at',
-        'medicines.*'
-      )
-      .join('medicines', 'wishlist_items.medicine_id', 'medicines.id')
-      .where('wishlist_items.user_id', userId)
-      .orderBy('wishlist_items.created_at', 'desc');
+    const [rows] = await pool.query(
+      `SELECT wi.id, wi.created_at, m.*
+       FROM wishlist_items wi
+       JOIN medicines m ON wi.medicine_id = m.id
+       WHERE wi.user_id = ?
+       ORDER BY wi.created_at DESC`,
+      [userId]
+    );
+    return rows;
   }
 
   async addToWishlist(userId, medicineId) {
-    const [item] = await db('wishlist_items')
-      .insert({
-        user_id: userId,
-        medicine_id: medicineId
-      })
-      .onConflict(['user_id', 'medicine_id'])
-      .ignore()
-      .returning('*');
-
-    if (!item) {
-      throw new Error('Item already in wishlist');
+    try {
+      const [result] = await pool.query(
+        `INSERT INTO wishlist_items (user_id, medicine_id)
+         VALUES (?, ?)`,
+        [userId, medicineId]
+      );
+      
+      return this.getWishlistItem(result.insertId);
+    } catch (error) {
+      // Check if it's a duplicate entry error
+      if (error.code === 'ER_DUP_ENTRY') {
+        throw new Error('Item already in wishlist');
+      }
+      throw error;
     }
-
-    return this.getWishlistItem(item.id);
   }
 
   async removeFromWishlist(userId, medicineId) {
-    const deleted = await db('wishlist_items')
-      .where({
-        user_id: userId,
-        medicine_id: medicineId
-      })
-      .delete();
+    const [result] = await pool.query(
+      `DELETE FROM wishlist_items
+       WHERE user_id = ? AND medicine_id = ?`,
+      [userId, medicineId]
+    );
 
-    if (!deleted) {
+    if (result.affectedRows === 0) {
       throw new Error('Item not found in wishlist');
     }
   }
 
   async getWishlistItem(itemId) {
-    return db('wishlist_items')
-      .select(
-        'wishlist_items.id',
-        'wishlist_items.created_at',
-        'medicines.*'
-      )
-      .join('medicines', 'wishlist_items.medicine_id', 'medicines.id')
-      .where('wishlist_items.id', itemId)
-      .first();
+    const [[item]] = await pool.query(
+      `SELECT wi.id, wi.created_at, m.*
+       FROM wishlist_items wi
+       JOIN medicines m ON wi.medicine_id = m.id
+       WHERE wi.id = ?`,
+      [itemId]
+    );
+    
+    return item;
   }
 
   async isInWishlist(userId, medicineId) {
-    const item = await db('wishlist_items')
-      .where({
-        user_id: userId,
-        medicine_id: medicineId
-      })
-      .first();
+    const [rows] = await pool.query(
+      `SELECT 1 FROM wishlist_items
+       WHERE user_id = ? AND medicine_id = ?
+       LIMIT 1`,
+      [userId, medicineId]
+    );
 
-    return !!item;
+    return rows.length > 0;
   }
 
   async getWishlistCount(userId) {
-    const result = await db('wishlist_items')
-      .where('user_id', userId)
-      .count('id as count')
-      .first();
+    const [[result]] = await pool.query(
+      `SELECT COUNT(id) as count
+       FROM wishlist_items
+       WHERE user_id = ?`,
+      [userId]
+    );
 
     return parseInt(result.count);
   }
 }
 
-module.exports = new WishlistService(); 
+const wishlistService = new WishlistService();
+export { wishlistService as default };
+export function getWishlist(userId) { return wishlistService.getWishlist(userId); }
+export function addToWishlist(userId, medicineId) { return wishlistService.addToWishlist(userId, medicineId); }
+export function removeFromWishlist(userId, medicineId) { return wishlistService.removeFromWishlist(userId, medicineId); }
+export function isInWishlist(userId, medicineId) { return wishlistService.isInWishlist(userId, medicineId); }
+export function getWishlistCount(userId) { return wishlistService.getWishlistCount(userId); } 

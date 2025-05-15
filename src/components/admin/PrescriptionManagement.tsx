@@ -114,7 +114,7 @@ const PrescriptionManagement = () => {
   const fetchPrescriptions = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/prescriptions/admin/all', {
+      const response = await axios.get('/prescriptions/admin/all', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -144,7 +144,7 @@ const PrescriptionManagement = () => {
   const fetchRecommendedMedicines = async (prescriptionId: number) => {
     try {
       setIsLoadingMedicines(true);
-      const response = await axios.get(`/api/prescriptions/admin/${prescriptionId}/recommendations`, {
+      const response = await axios.get(`/prescriptions/admin/${prescriptionId}/recommendations`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -176,7 +176,7 @@ const PrescriptionManagement = () => {
     try {
       setUpdatingStatus(true);
       const response = await axios.put(
-        `/api/prescriptions/${selectedPrescription.id}/status`,
+        `/prescriptions/${selectedPrescription.id}/status`,
         { status, notes },
         {
           headers: {
@@ -241,7 +241,7 @@ const PrescriptionManagement = () => {
       // Process each selected prescription
       for (const id of selectedItems) {
         await axios.put(
-          `/api/prescriptions/${id}/status`,
+          `/prescriptions/${id}/status`,
           { status, notes: '' },
           {
             headers: {
@@ -308,7 +308,7 @@ const PrescriptionManagement = () => {
     
     try {
       const response = await axios.post(
-        `/api/prescriptions/${selectedPrescription.id}/medicines`,
+        `/prescriptions/${selectedPrescription.id}/medicines`,
         { medicine_id: medicineId, quantity: 1 },
         {
           headers: {

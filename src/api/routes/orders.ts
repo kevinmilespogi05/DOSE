@@ -5,6 +5,7 @@ import { authenticateToken } from '../middleware/auth';
 import { sendEmail } from '../utils/email';
 import { v4 as uuidv4 } from 'uuid';
 import { execute, withTransaction } from '../../utils/db';
+import { query } from '../../utils/db';
 
 const router = Router();
 
@@ -161,12 +162,29 @@ router.post('/',
         await connection.commit();
 
         // Send order confirmation email
-        const [user] = await connection.query('SELECT email, name FROM users WHERE id = ?', [userId]);
-        await sendEmail(
-          user[0].email,
-          'Order Confirmation',
-          `Dear ${user[0].name},\n\nYour order has been placed successfully. Order ID: ${orderId}\nTotal Amount: $${totalAmount}\n\nThank you for your purchase!`
+        const [user] = await connection.query(
+          `SELECT u.email, u.username, COALESCE(up.first_name, u.username) as name 
+           FROM users u
+           LEFT JOIN user_profiles up ON u.id = up.user_id
+           WHERE u.id = ?`, 
+          [userId]
         );
+        
+        try {
+          // Only try to send email if there's a valid email address
+          if (user[0]?.email) {
+            await sendEmail(
+              user[0].email,
+              'Order Confirmation',
+              `Dear ${user[0].name},\n\nYour order has been placed successfully. Order ID: ${orderId}\nTotal Amount: $${totalAmount}\n\nThank you for your purchase!`
+            );
+          } else {
+            console.warn(`No email found for user ${userId}, skipping order confirmation email`);
+          }
+        } catch (emailError) {
+          // Log email error but don't fail the order creation
+          console.error('Failed to send order confirmation email:', emailError);
+        }
 
         res.json({
           message: 'Order created successfully',
@@ -235,12 +253,29 @@ router.post('/:orderId/cancel',
         await connection.commit();
 
         // Send cancellation email
-        const [user] = await connection.query('SELECT email, name FROM users WHERE id = ?', [userId]);
-        await sendEmail(
-          user[0].email,
-          'Order Cancelled',
-          `Dear ${user[0].name},\n\nYour order (${orderId}) has been cancelled successfully.\n\nThank you for using our service.`
+        const [user] = await connection.query(
+          `SELECT u.email, u.username, COALESCE(up.first_name, u.username) as name 
+           FROM users u
+           LEFT JOIN user_profiles up ON u.id = up.user_id
+           WHERE u.id = ?`, 
+          [userId]
         );
+        
+        try {
+          // Only try to send email if there's a valid email address
+          if (user[0]?.email) {
+            await sendEmail(
+              user[0].email,
+              'Order Cancelled',
+              `Dear ${user[0].name},\n\nYour order (${orderId}) has been cancelled successfully.\n\nThank you for using our service.`
+            );
+          } else {
+            console.warn(`No email found for user ${userId}, skipping order cancellation email`);
+          }
+        } catch (emailError) {
+          // Log email error but don't fail the order cancellation
+          console.error('Failed to send order cancellation email:', emailError);
+        }
 
         res.json({ message: 'Order cancelled successfully' });
       } catch (error) {
@@ -505,7 +540,7 @@ router.get('/:orderId', authenticateToken, async (req, res) => {
         oi.quantity,
         oi.unit_price as price
        FROM order_items oi
-       LEFT JOIN medicines m ON oi.medicine_id = m.id
+       INNER JOIN medicines m ON oi.medicine_id = m.id
        WHERE oi.order_id = ?`,
       [orderId]
     );
@@ -605,5 +640,29 @@ router.post('/:orderId/tracking', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error adding tracking status' });
   }
 });
+
+// Check if user has purchased a specific medicine
+router.get('/has-purchased/:medicineId', 
+  authenticateToken,
+  async (req: any, res) => {
+    try {
+      const { medicineId } = req.params;
+      const userId = req.user.id;
+      
+      const purchases = await query(
+        `SELECT 1 FROM order_items oi 
+         JOIN orders o ON oi.order_id = o.id
+         WHERE o.user_id = ? AND oi.medicine_id = ? AND o.status IN ('delivered', 'completed')
+         LIMIT 1`,
+        [userId, medicineId]
+      );
+      
+      res.json({ hasPurchased: purchases.length > 0 });
+    } catch (error) {
+      console.error('Error checking purchase status:', error);
+      res.status(500).json({ message: 'Failed to check purchase status' });
+    }
+  }
+);
 
 export default router; 

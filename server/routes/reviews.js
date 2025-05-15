@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import { authenticateToken } from '../middleware/auth.js';
+import * as reviewService from '../services/reviewService.js';
+
 const router = express.Router();
-const reviewService = require('../services/reviewService');
-const { authenticateToken } = require('../middleware/auth');
 
 // Get reviews for a medicine
 router.get('/medicines/:medicineId/reviews', async (req, res) => {
@@ -77,4 +78,4 @@ router.delete('/medicines/:medicineId/reviews/:reviewId', authenticateToken, asy
   }
 });
 
-module.exports = router; 
+export default router; 

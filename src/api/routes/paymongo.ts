@@ -1,7 +1,7 @@
 import express from 'express';
 import axios from 'axios';
 import { execute, withTransaction } from '../../utils/db';
-import { authenticateToken, isAdmin } from '../middleware/auth';
+import { isAuthenticated, isAdmin } from '../middleware/auth';
 import SERVER_CONFIG from '../../config/server-config';
 
 const router = express.Router();
@@ -19,11 +19,13 @@ const paymongoApi = axios.create({
 });
 
 // Create GCash payment source
-router.post('/create-source', authenticateToken, async (req, res) => {
+router.post('/create-source', isAuthenticated, async (req, res) => {
   const { orderId, amount } = req.body;
   const userId = req.user.userId;
 
   try {
+    console.log('Creating payment source for order:', orderId, 'amount:', amount, 'user:', userId);
+    
     // Verify order belongs to user
     const orders = await execute(
       'SELECT id, total_amount, status FROM orders WHERE id = ? AND user_id = ?',
@@ -31,99 +33,120 @@ router.post('/create-source', authenticateToken, async (req, res) => {
     );
 
     if (orders.length === 0) {
-      return res.status(404).json({ message: 'Order not found' });
+      console.error('Order not found:', orderId, 'for user:', userId);
+      return res.status(404).json({ 
+        message: 'Order not found',
+        details: 'The requested order does not exist or does not belong to this user'
+      });
     }
 
     const order = orders[0];
     if (order.status !== 'pending_payment') {
-      return res.status(400).json({ message: 'Order is not pending payment' });
+      console.error('Invalid order status:', order.status, 'for order:', orderId);
+      return res.status(400).json({ 
+        message: 'Order is not pending payment',
+        details: `Current order status: ${order.status}`
+      });
     }
 
     // Create PayMongo source
-    const sourceResponse = await paymongoApi.post('/sources', {
-      data: {
-        attributes: {
-          amount: Math.round(amount * 100), // Convert to cents
-          redirect: {
-            success: `${SERVER_CONFIG.PAYMONGO.FRONTEND_URL}/payment/success`,
-            failed: `${SERVER_CONFIG.PAYMONGO.FRONTEND_URL}/payment/failed`
-          },
-          type: 'gcash',
-          currency: 'PHP'
+    try {
+      const sourceResponse = await paymongoApi.post('/sources', {
+        data: {
+          attributes: {
+            amount: Math.round(amount * 100), // Convert to cents
+            redirect: {
+              success: `${SERVER_CONFIG.PAYMONGO.FRONTEND_URL}/payment/success`,
+              failed: `${SERVER_CONFIG.PAYMONGO.FRONTEND_URL}/payment/failed`
+            },
+            type: 'gcash',
+            currency: 'PHP'
+          }
         }
-      }
-    });
+      });
 
-    const source = sourceResponse.data.data;
+      const source = sourceResponse.data.data;
+      console.log('PayMongo source created successfully:', source.id);
 
-    // Create payment record
-    await withTransaction(async () => {
-      await execute(
-        `INSERT INTO payments (
-          id, order_id, amount, payment_method, source_id, status
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          Date.now().toString(),
-          orderId,
-          amount,
-          'gcash',
-          source.id,
-          'pending'
-        ]
-      );
+      // Create payment record
+      await withTransaction(async () => {
+        await execute(
+          `INSERT INTO payments (
+            id, order_id, amount, payment_method, source_id, status
+          ) VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            Date.now().toString(),
+            orderId,
+            amount,
+            'gcash',
+            source.id,
+            'pending'
+          ]
+        );
 
-      // Update order status
-      await execute(
-        'UPDATE orders SET status = ? WHERE id = ?',
-        ['payment_submitted', orderId]
-      );
-      
-      // Add initial tracking status
-      const trackingId = Date.now().toString();
-      await execute(
-        `INSERT INTO order_tracking (id, order_id, status, description)
-         VALUES (?, ?, ?, ?)`,
-        [
-          trackingId,
-          orderId,
-          'processing',
-          'Payment submitted and being verified.'
-        ]
-      );
+        // Update order status
+        await execute(
+          'UPDATE orders SET status = ? WHERE id = ?',
+          ['payment_submitted', orderId]
+        );
+        
+        // Add initial tracking status
+        const trackingId = Date.now().toString();
+        await execute(
+          `INSERT INTO order_tracking (id, order_id, status, description)
+           VALUES (?, ?, ?, ?)`,
+          [
+            trackingId,
+            orderId,
+            'processing',
+            'Payment submitted and being verified.'
+          ]
+        );
 
-      // Add delivery tracking status
-      const deliveryTrackingId = (Date.now() + 1).toString();
-      await execute(
-        `INSERT INTO order_tracking (id, order_id, status, description, location)
-         VALUES (?, ?, ?, ?, ?)`,
-        [
-          deliveryTrackingId,
-          orderId,
-          'shipping',
-          'Your order is on the way!',
-          'Dispatch Center'
-        ]
-      );
-      
-      // Clear cart after payment is submitted
-      await execute(
-        'DELETE FROM cart_items WHERE cart_id IN (SELECT id FROM cart WHERE user_id = ?)',
-        [userId]
-      );
-    });
+        // Add delivery tracking status
+        const deliveryTrackingId = (Date.now() + 1).toString();
+        await execute(
+          `INSERT INTO order_tracking (id, order_id, status, description, location)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            deliveryTrackingId,
+            orderId,
+            'shipping',
+            'Your order is on the way!',
+            'Dispatch Center'
+          ]
+        );
+        
+        // Clear cart after payment is submitted
+        await execute(
+          'DELETE FROM cart_items WHERE cart_id IN (SELECT id FROM cart WHERE user_id = ?)',
+          [userId]
+        );
+      });
 
-    res.json({
-      checkoutUrl: source.attributes.redirect.checkout_url,
-      sourceId: source.id
-    });
+      res.json({
+        checkoutUrl: source.attributes.redirect.checkout_url,
+        sourceId: source.id
+      });
+    } catch (paymongoError) {
+      console.error('PayMongo API error:', paymongoError.response?.data || paymongoError.message);
+      return res.status(502).json({ 
+        message: 'Error creating GCash source via PayMongo API',
+        details: paymongoError.response?.data?.errors?.[0]?.detail || paymongoError.message,
+        code: 'PAYMONGO_API_ERROR'
+      });
+    }
   } catch (error) {
     console.error('Error creating GCash source:', error);
-    res.status(500).json({ message: 'Error creating GCash payment' });
+    res.status(500).json({ 
+      message: 'Error creating GCash payment',
+      details: error.message || 'Internal server error'
+    });
   }
 });
 
 // Verify payment status
-router.post('/verify', authenticateToken, async (req, res) => {
+router.post('/verify', isAuthenticated, async (req, res) => {
   const { sourceId, orderId } = req.body;
   const userId = req.user.userId;
 

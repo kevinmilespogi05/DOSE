@@ -1,10 +1,14 @@
 import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const dbConfig = {
-  host: 'localhost',
-  user: 'root',
-  password: '', 
-  database: 'project_db',
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '', 
+  database: process.env.DB_NAME || 'dose_db',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -30,7 +34,7 @@ async function testConnection() {
       } else if (error.message.includes('ER_ACCESS_DENIED_ERROR')) {
         console.error('Access denied. Check your database username and password.');
       } else if (error.message.includes('ER_BAD_DB_ERROR')) {
-        console.error('Database "project_db" does not exist. Create it before running the application.');
+        console.error(`Database "${dbConfig.database}" does not exist. Create it before running the application.`);
       }
     }
     return false;

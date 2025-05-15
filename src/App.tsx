@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
@@ -28,18 +28,45 @@ import Prescriptions from './components/shop/Prescriptions';
 import PrescriptionManagement from './components/admin/PrescriptionManagement';
 import Orders from './components/admin/Orders';
 import Reports from './components/admin/Reports';
+import ReturnRequests from './components/admin/ReturnRequests';
+import ShippingMethods from './components/admin/ShippingMethods';
+import TaxRates from './components/admin/TaxRates';
+import Coupons from './components/admin/Coupons';
+import PromotionManagement from './components/admin/PromotionManagement';
+import PromotionsPage from './pages/shop/Promotions';
+import UnauthorizedAccess from './components/common/UnauthorizedAccess';
+import InventoryManagement from './components/inventory/InventoryManagement';
+import AdvancedAnalytics from './components/AdvancedAnalytics';
+import RatingModeration from './pages/admin/RatingModeration';
 
 // Route guard for authenticated users
 const PrivateRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? element : <Navigate to="/login" replace />;
+  const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
+  
+  if (!isAuthenticated) {
+    // Redirect to login page with return URL
+    return <Navigate to={`/login?returnUrl=${encodeURIComponent(location.pathname)}`} replace />;
+  }
+  return element;
 };
 
 // Route guard for admin users
 const AdminRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => {
-  const { isAuthenticated, isAdmin } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (!isAdmin) return <Navigate to="/dashboard" replace />;
+  const { isAuthenticated, isAdmin, user } = useAuth();
+  const location = useLocation();
+  
+  // If not authenticated, redirect to login
+  if (!isAuthenticated) {
+    return <Navigate to={`/login?returnUrl=${encodeURIComponent(location.pathname)}`} replace />;
+  }
+  
+  // If authenticated but not admin, show unauthorized page
+  if (!isAdmin) {
+    console.log('User attempted to access admin route but is not an admin:', user?.email);
+    return <UnauthorizedAccess />;
+  }
+  
   return element;
 };
 
@@ -85,7 +112,16 @@ function AppContent() {
               <Route path="/admin/users" element={<AdminRoute element={<Users />} />} />
               <Route path="/admin/prescriptions" element={<AdminRoute element={<PrescriptionManagement />} />} />
               <Route path="/admin/orders" element={<AdminRoute element={<Orders />} />} />
+              <Route path="/admin/returns" element={<AdminRoute element={<ReturnRequests />} />} />
               <Route path="/admin/reports" element={<AdminRoute element={<Reports />} />} />
+              <Route path="/admin/shipping" element={<AdminRoute element={<ShippingMethods />} />} />
+              <Route path="/admin/tax-rates" element={<AdminRoute element={<TaxRates />} />} />
+              <Route path="/admin/coupons" element={<AdminRoute element={<Coupons />} />} />
+              <Route path="/admin/promotions" element={<AdminRoute element={<PromotionManagement />} />} />
+              <Route path="/admin/analytics" element={
+                <AdminRoute element={<AdvancedAnalytics />} />
+              } />
+              <Route path="/admin/rating-moderation" element={<AdminRoute element={<RatingModeration />} />} />
               
               {/* User Routes */}
               <Route path="/shop" element={<UserRoute element={<Shop />} />} />
@@ -95,6 +131,7 @@ function AppContent() {
               <Route path="/order-history" element={<UserRoute element={<OrderHistory />} />} />
               <Route path="/orders/:orderId" element={<UserRoute element={<OrderDetails />} />} />
               <Route path="/prescriptions" element={<UserRoute element={<Prescriptions />} />} />
+              <Route path="/promotions" element={<UserRoute element={<PromotionsPage />} />} />
               
               {/* Shared Protected Routes */}
               <Route path="/profile" element={<PrivateRoute element={<Profile />} />} />
@@ -105,6 +142,14 @@ function AppContent() {
               {/* Payment Routes */}
               <Route path="/payment/success" element={<PaymentSuccess />} />
               <Route path="/payment/failed" element={<PaymentFailed />} />
+
+              {/* Inventory Management Route */}
+              <Route 
+                path="/inventory" 
+                element={
+                  <AdminRoute element={<InventoryManagement />} />
+                } 
+              />
             </Routes>
           </div>
         </main>

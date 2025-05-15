@@ -54,11 +54,29 @@ const AdminDashboard = () => {
       showLoading('Loading dashboard data...');
       try {
         const token = localStorage.getItem('token');
+        console.log('Auth token available:', !!token);
+        if (token) {
+          // Log the token details (only first few characters for security)
+          const tokenPreview = token.substring(0, 10) + '...';
+          console.log('Token preview:', tokenPreview);
+          
+          try {
+            // Try to decode the token to check if it's valid
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const payload = JSON.parse(window.atob(base64));
+            console.log('Token expiry:', new Date(payload.exp * 1000).toLocaleString());
+            console.log('Token user role:', payload.role || 'No role found in token');
+          } catch (e) {
+            console.error('Token decode error:', e);
+          }
+        }
+
         if (!token) {
           throw new Error('No authentication token found');
         }
 
-        const response = await axios.get('/api/admin/dashboard', {
+        const response = await axios.get('/admin/dashboard', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -69,6 +87,11 @@ const AdminDashboard = () => {
         closeAlert();
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
+        // More detailed error logging
+        if (axios.isAxiosError(err)) {
+          console.log('Status code:', err.response?.status);
+          console.log('Error message:', err.response?.data?.message || err.message);
+        }
         setError('Failed to load dashboard data. Please try again later.');
         setLoading(false);
         closeAlert();

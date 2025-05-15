@@ -7,6 +7,7 @@ import PaymongoCheckout from '../payment/PaymongoCheckout';
 import { formatPeso } from '../../utils/currency';
 import { Link } from 'react-router-dom';
 import { payMongoStatus } from '../../utils/paymongo';
+import CouponForm from './CouponForm';
 
 interface CartItem {
   id: number;
@@ -17,6 +18,22 @@ interface CartItem {
   unit: string;
   image_url?: string;
   requires_prescription: boolean;
+  stock_quantity?: number;
+}
+
+interface ShippingMethod {
+  id: number;
+  name: string;
+  base_cost: number;
+  estimated_days: number;
+}
+
+interface CouponData {
+  id: number;
+  code: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  discount_amount: number;
 }
 
 const Cart = () => {
@@ -29,9 +46,25 @@ const Cart = () => {
   const { updateCartCount } = useCart();
   const [prescriptionValidationError, setPrescriptionValidationError] = useState<string | null>(null);
   const [hasApprovedPrescriptions, setHasApprovedPrescriptions] = useState(false);
+  const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
+  const [selectedShippingMethod, setSelectedShippingMethod] = useState<ShippingMethod | null>(null);
+  const [shippingAddress, setShippingAddress] = useState({
+    address: '',
+    city: '',
+    state: '',
+    country: 'Philippines',
+    postal_code: ''
+  });
+  const [taxRate, setTaxRate] = useState<number>(0);
+  const [taxAmount, setTaxAmount] = useState<number>(0);
+  const [subtotal, setSubtotal] = useState<number>(0);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponData | null>(null);
+  const [discountAmount, setDiscountAmount] = useState<number>(0);
 
   useEffect(() => {
     fetchCartItems();
+    fetchShippingMethods();
   }, []);
 
   useEffect(() => {
@@ -40,14 +73,53 @@ const Cart = () => {
     }
   }, [cartItems]);
 
+  useEffect(() => {
+    // Calculate subtotal whenever cart items change
+    const newSubtotal = calculateSubtotal();
+    setSubtotal(newSubtotal);
+  }, [cartItems]);
+
+  useEffect(() => {
+    // Fetch tax rate when shipping address state changes
+    if (shippingAddress.state && shippingAddress.country) {
+      fetchTaxRate();
+    }
+  }, [shippingAddress.state, shippingAddress.country]);
+
+  useEffect(() => {
+    // Calculate tax amount whenever subtotal, shipping cost, discount, or tax rate changes
+    calculateTaxAmount();
+  }, [subtotal, selectedShippingMethod, discountAmount, taxRate]);
+
   const fetchCartItems = async () => {
     try {
-      const response = await axios.get('/api/cart', {
+      const response = await axios.get('/cart', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      setCartItems(response.data);
+      
+      // Fetch stock information for each cart item
+      const updatedItems = await Promise.all(
+        response.data.map(async (item) => {
+          try {
+            const stockResponse = await axios.get(`/medicines/${item.medicine_id}`, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              }
+            });
+            return {
+              ...item,
+              stock_quantity: stockResponse.data.stock_quantity
+            };
+          } catch (err) {
+            console.error(`Error fetching stock for medicine ${item.medicine_id}:`, err);
+            return item;
+          }
+        })
+      );
+      
+      setCartItems(updatedItems);
       setLoading(false);
     } catch (err) {
       setError('Failed to fetch cart items');
@@ -55,11 +127,66 @@ const Cart = () => {
     }
   };
 
+  const fetchShippingMethods = async () => {
+    try {
+      const response = await axios.get('/shipping-methods', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      setShippingMethods(response.data);
+      if (response.data.length > 0) {
+        setSelectedShippingMethod(response.data[0]);
+      }
+    } catch (err) {
+      console.error('Error fetching shipping methods:', err);
+    }
+  };
+
+  const fetchTaxRate = async () => {
+    try {
+      const response = await axios.get(
+        `/tax-rates?country=${shippingAddress.country}&state=${shippingAddress.state}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      if (response.data && response.data.rate) {
+        setTaxRate(response.data.rate);
+      } else {
+        setTaxRate(0);
+      }
+    } catch (err) {
+      console.error('Error fetching tax rate:', err);
+      setTaxRate(0);
+    }
+  };
+
   const updateQuantity = async (itemId: number, newQuantity: number) => {
     if (newQuantity < 1) return;
     
     try {
-      await axios.put(`/api/cart/items/${itemId}`, 
+      // Get the cart item to check its medicine_id
+      const itemToUpdate = cartItems.find(item => item.id === itemId);
+      if (!itemToUpdate) return;
+
+      // Check available stock before updating quantity
+      const stockCheckResponse = await axios.get(`/medicines/${itemToUpdate.medicine_id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      const availableStock = stockCheckResponse.data.stock_quantity;
+      
+      if (newQuantity > availableStock) {
+        setError(`Only ${availableStock} units of ${itemToUpdate.name} are available`);
+        return;
+      }
+      
+      await axios.put(`/cart/items/${itemId}`, 
         { quantity: newQuantity },
         {
           headers: {
@@ -71,6 +198,7 @@ const Cart = () => {
       setCartItems(cartItems.map(item => 
         item.id === itemId ? { ...item, quantity: newQuantity } : item
       ));
+      setError(null);
     } catch (err) {
       setError('Failed to update quantity');
     }
@@ -78,7 +206,7 @@ const Cart = () => {
 
   const removeItem = async (itemId: number) => {
     try {
-      await axios.delete(`/api/cart/items/${itemId}`, {
+      await axios.delete(`/cart/items/${itemId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -91,16 +219,29 @@ const Cart = () => {
     }
   };
 
-  const calculateTotal = () => {
+  const calculateSubtotal = () => {
     return cartItems.reduce((total, item) => {
       const itemPrice = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
       return total + (itemPrice * item.quantity);
     }, 0);
   };
 
+  const calculateTaxAmount = () => {
+    const shippingCost = selectedShippingMethod ? selectedShippingMethod.base_cost : 0;
+    // Apply tax after discounts
+    const taxableAmount = Number(subtotal) - Number(discountAmount) + Number(shippingCost);
+    const newTaxAmount = (taxableAmount * taxRate) / 100;
+    setTaxAmount(newTaxAmount);
+  };
+
+  const calculateTotal = () => {
+    const shippingCost = selectedShippingMethod ? Number(selectedShippingMethod.base_cost) : 0;
+    return Number(subtotal) - Number(discountAmount) + shippingCost + Number(taxAmount);
+  };
+
   const checkApprovedPrescriptions = async () => {
     try {
-      const response = await axios.get('/api/prescriptions/user', {
+      const response = await axios.get('/prescriptions/user', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -112,6 +253,38 @@ const Cart = () => {
       console.error('Error checking prescriptions:', err);
       setHasApprovedPrescriptions(false);
     }
+  };
+
+  const handleShippingMethodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const methodId = parseInt(e.target.value);
+    const selectedMethod = shippingMethods.find(method => method.id === methodId) || null;
+    setSelectedShippingMethod(selectedMethod);
+  };
+
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setShippingAddress(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const validateShippingAddress = () => {
+    const { address, city, state, postal_code } = shippingAddress;
+    if (!address.trim() || !city.trim() || !state.trim() || !postal_code.trim()) {
+      return false;
+    }
+    return true;
+  };
+
+  const handleApplyCoupon = (couponData: CouponData) => {
+    setAppliedCoupon(couponData);
+    setDiscountAmount(couponData.discount_amount);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setDiscountAmount(0);
   };
 
   const handleCheckout = async () => {
@@ -128,6 +301,19 @@ const Cart = () => {
         return;
       }
 
+      // Validate shipping method is selected
+      if (!selectedShippingMethod) {
+        setError('Please select a shipping method');
+        return;
+      }
+
+      // Validate shipping address
+      if (!validateShippingAddress()) {
+        setError('Please provide a complete shipping address');
+        setShowAddressForm(true);
+        return;
+      }
+
       // Validate prescription requirements
       const requiresPrescription = cartItems.some(item => item.requires_prescription);
       if (requiresPrescription && !hasApprovedPrescriptions) {
@@ -141,6 +327,27 @@ const Cart = () => {
       const invalidItems = cartItems.filter(item => item.quantity < 1);
       if (invalidItems.length > 0) {
         setError('Some items have invalid quantities');
+        return;
+      }
+      
+      // Check stock availability for all items
+      let stockError = false;
+      for (const item of cartItems) {
+        const stockCheckResponse = await axios.get(`/medicines/${item.medicine_id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        const availableStock = stockCheckResponse.data.stock_quantity;
+        if (item.quantity > availableStock) {
+          setError(`Insufficient stock for ${item.name}. Only ${availableStock} units available.`);
+          stockError = true;
+          break;
+        }
+      }
+      
+      if (stockError) {
         return;
       }
 
@@ -164,12 +371,25 @@ const Cart = () => {
       const orderData = {
         items: orderItems,
         total_amount: totalAmount,
-        user_id: user.id
+        user_id: user.id,
+        shipping_address: shippingAddress.address,
+        shipping_city: shippingAddress.city,
+        shipping_state: shippingAddress.state,
+        shipping_country: shippingAddress.country,
+        shipping_postal_code: shippingAddress.postal_code,
+        shipping_method_id: selectedShippingMethod.id,
+        shipping_cost: selectedShippingMethod.base_cost,
+        tax_amount: taxAmount
       };
+
+      // Add coupon code if one is applied
+      if (appliedCoupon) {
+        orderData.coupon_code = appliedCoupon.code;
+      }
 
       console.log('Creating order with data:', orderData);
 
-      const response = await axios.post('/api/orders', 
+      const response = await axios.post('/orders', 
         orderData,
         {
           headers: {
@@ -213,7 +433,7 @@ const Cart = () => {
     setOrderId(null);
     
     // Clear cart items explicitly to handle any missed cases
-    axios.delete('/api/cart/clear', {
+    axios.delete('/cart/clear', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -271,6 +491,11 @@ const Cart = () => {
                       <div>
                         <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
                         <p className="text-gray-600">{formatPeso(item.price)} per {item.unit}</p>
+                        {item.stock_quantity && (
+                          <p className={`text-sm ${item.stock_quantity < 5 ? 'text-red-500' : 'text-gray-500'}`}>
+                            {item.stock_quantity} in stock
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
@@ -285,7 +510,8 @@ const Cart = () => {
                         <span className="w-8 text-center">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="p-1 rounded-md text-gray-500 hover:text-primary-600 hover:bg-gray-100"
+                          className="p-1 rounded-md text-gray-500 hover:text-primary-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={item.stock_quantity !== undefined && item.quantity >= item.stock_quantity}
                         >
                           <Plus className="w-5 h-5" />
                         </button>
@@ -304,13 +530,159 @@ const Cart = () => {
                 </div>
               ))}
             </div>
+
+            {/* Shipping Address Form */}
+            <div className="mt-6 bg-white shadow-soft rounded-lg p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-medium text-gray-900">Shipping Address</h2>
+                <button
+                  onClick={() => setShowAddressForm(!showAddressForm)}
+                  className="text-primary-600 text-sm font-medium"
+                >
+                  {showAddressForm ? 'Hide' : 'Edit'}
+                </button>
+              </div>
+
+              {showAddressForm ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={shippingAddress.address}
+                      onChange={handleAddressChange}
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={shippingAddress.city}
+                      onChange={handleAddressChange}
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">State/Province</label>
+                    <input
+                      type="text"
+                      name="state"
+                      value={shippingAddress.state}
+                      onChange={handleAddressChange}
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                    <input
+                      type="text"
+                      name="country"
+                      value={shippingAddress.country}
+                      onChange={handleAddressChange}
+                      className="w-full p-2 border border-gray-300 rounded-md bg-gray-100"
+                      required
+                      readOnly
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
+                    <input
+                      type="text"
+                      name="postal_code"
+                      value={shippingAddress.postal_code}
+                      onChange={handleAddressChange}
+                      className="w-full p-2 border border-gray-300 rounded-md"
+                      required
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="text-gray-600">
+                  {shippingAddress.address ? (
+                    <>
+                      <p>{shippingAddress.address}</p>
+                      <p>{shippingAddress.city}, {shippingAddress.state} {shippingAddress.postal_code}</p>
+                      <p>{shippingAddress.country}</p>
+                    </>
+                  ) : (
+                    <p className="text-gray-500 italic">No shipping address provided</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Shipping Methods */}
+            <div className="mt-6 bg-white shadow-soft rounded-lg p-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">Shipping Method</h2>
+              {shippingMethods.length > 0 ? (
+                <div>
+                  <select
+                    value={selectedShippingMethod?.id || ''}
+                    onChange={handleShippingMethodChange}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                  >
+                    {shippingMethods.map(method => (
+                      <option key={method.id} value={method.id}>
+                        {method.name} - {formatPeso(method.base_cost)} ({method.estimated_days} {method.estimated_days === 1 ? 'day' : 'days'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <p className="text-gray-500">No shipping methods available</p>
+              )}
+            </div>
+
+            {/* Coupon Form */}
+            <div className="mt-6">
+              <CouponForm 
+                subtotal={subtotal}
+                onApplyCoupon={handleApplyCoupon}
+                onRemoveCoupon={handleRemoveCoupon}
+                appliedCoupon={appliedCoupon}
+              />
+            </div>
           </div>
           <div className="lg:col-span-1">
             <div className="bg-white shadow-soft rounded-lg p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Order Summary</h2>
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-gray-600">Total</span>
-                <span className="text-2xl font-bold">{formatPeso(calculateTotal())}</span>
+              <div className="space-y-3 mb-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="font-medium">{formatPeso(subtotal)}</span>
+                </div>
+                
+                {discountAmount > 0 && (
+                  <div className="flex justify-between items-center text-green-600">
+                    <span>Discount</span>
+                    <span className="font-medium">-{formatPeso(discountAmount)}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Shipping</span>
+                  <span className="font-medium">
+                    {selectedShippingMethod 
+                      ? formatPeso(selectedShippingMethod.base_cost)
+                      : 'Select shipping method'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Tax ({taxRate}%)</span>
+                  <span className="font-medium">{formatPeso(taxAmount)}</span>
+                </div>
+                <div className="border-t border-gray-200 pt-3 mt-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-800 font-semibold">Total</span>
+                    <span className="text-2xl font-bold">{formatPeso(calculateTotal())}</span>
+                  </div>
+                </div>
               </div>
               <button
                 onClick={handleCheckout}

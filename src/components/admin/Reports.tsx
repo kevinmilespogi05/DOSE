@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../utils/axios';
 
 interface SalesData {
   period: string;
@@ -34,17 +34,7 @@ const Reports: React.FC = () => {
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await axios.get('/api/admin/reports/sales', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
+        const response = await axiosInstance.get('/api/admin/orders/reports/sales');
         setReportData(response.data);
         setLoading(false);
       } catch (err) {

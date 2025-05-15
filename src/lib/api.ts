@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 
 const api = axios.create({
   baseURL: 'http://localhost:3000/api',
@@ -8,10 +9,34 @@ const api = axios.create({
   }
 });
 
+// Function to check if token is expired
+const isTokenExpired = (token) => {
+  try {
+    const decoded = jwtDecode(token);
+    const currentTime = Date.now() / 1000;
+    
+    if (!decoded.exp) return true; // No expiration means risky, treat as expired
+    return decoded.exp < currentTime;
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return true; // If we can't decode, assume it's expired
+  }
+};
+
 // Add token to requests if it exists
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
+  
   if (token) {
+    // Check if token is expired
+    if (isTokenExpired(token)) {
+      console.log('Token expired, removing from storage');
+      localStorage.removeItem('token');
+      // Redirect to login if token is expired
+      window.location.href = '/login';
+      return config;
+    }
+    
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -21,9 +46,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    // Skip automatic redirection for payment API calls
+    const isPaymentApiCall = error.config?.url?.includes('/payments/');
+    
+    if ((error.response?.status === 401 || error.response?.status === 403) && !isPaymentApiCall) {
+      console.log('Unauthorized response, clearing token');
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      
+      // Only redirect to login if not already on login page
+      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/payment')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -37,9 +70,16 @@ export const auth = {
   },
   
   login: async (data: { email: string; password: string }) => {
-    const response = await api.post('/auth/login', data);
-    localStorage.setItem('token', response.data.token);
-    return response.data;
+    try {
+      const response = await api.post('/auth/login', data);
+      if (response.data && response.data.token) {
+        localStorage.setItem('token', response.data.token);
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Login API error:', error);
+      throw error;
+    }
   },
   
   logout: () => {
