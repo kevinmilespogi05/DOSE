@@ -19,23 +19,24 @@ interface MedicineFormProps {
 }
 
 const MedicineForm: React.FC<MedicineFormProps> = ({ onSubmit, initialData }) => {
-  const [formData, setFormData] = useState(initialData || {
-    name: '',
-    generic_name: '',
-    brand: '',
-    category_id: '',
-    description: '',
-    price: '',
-    stock_quantity: '',
-    unit: '',
-    supplier_id: '',
-    requires_prescription: false,
-    min_stock_level: 10,
-    max_stock_level: 100,
-    reorder_point: 20,
-    expiry_date: '',
-    box_quantity: '',
-    price_per_box: ''
+  const [formData, setFormData] = useState({
+    name: initialData?.name || '',
+    generic_name: initialData?.generic_name || '',
+    brand: initialData?.brand || '',
+    category_id: initialData?.category_id || '',
+    description: initialData?.description || '',
+    price: initialData?.price || '',
+    stock_quantity: initialData?.stock_quantity || '',
+    unit: initialData?.unit || '',
+    supplier_id: initialData?.supplier_id || '',
+    requires_prescription: initialData?.requires_prescription || false,
+    min_stock_level: initialData?.min_stock_level || 10,
+    max_stock_level: initialData?.max_stock_level || 100,
+    reorder_point: initialData?.reorder_point || 20,
+    expiry_date: initialData?.expiry_date || '',
+    box_quantity: initialData?.box_quantity || '',
+    price_per_box: initialData?.price_per_box || '',
+    image_url: initialData?.image_url || ''
   });
 
   const [categories, setCategories] = useState<Category[]>([]);

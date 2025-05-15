@@ -22,6 +22,8 @@ router.post('/',
   body('shipping_postal_code').isString(),
   body('shipping_method_id').isInt(),
   body('coupon_code').optional().isString(),
+  body('total_amount').isFloat(),
+  body('tax_amount').isFloat(),
   async (req, res) => {
     try {
       const errors = validationResult(req);
@@ -37,7 +39,9 @@ router.post('/',
         shipping_country,
         shipping_postal_code,
         shipping_method_id,
-        coupon_code
+        coupon_code,
+        total_amount,
+        tax_amount
       } = req.body;
 
       const userId = req.user.id;
@@ -47,11 +51,11 @@ router.post('/',
       await connection.beginTransaction();
 
       try {
-        // Calculate order total
-        let totalAmount = 0;
+        // Validate items and check stock
+        let calculatedSubtotal = 0;
         for (const item of items) {
           const [medicine] = await connection.query(
-            'SELECT price, stock_quantity FROM medicines WHERE id = ?',
+            'SELECT price, stock_quantity, name, unit FROM medicines WHERE id = ?',
             [item.medicine_id]
           );
 
@@ -63,7 +67,7 @@ router.post('/',
             throw new Error(`Insufficient stock for medicine ID ${item.medicine_id}`);
           }
 
-          totalAmount += medicine[0].price * item.quantity;
+          calculatedSubtotal += medicine[0].price * item.quantity;
         }
 
         // Get shipping cost
@@ -76,7 +80,7 @@ router.post('/',
           throw new Error('Invalid shipping method');
         }
 
-        totalAmount += shippingMethod[0].base_cost;
+        const shippingCost = shippingMethod[0].base_cost;
 
         // Apply coupon if provided
         let discountAmount = 0;
@@ -87,19 +91,17 @@ router.post('/',
           );
 
           if (coupon.length > 0) {
-            if (coupon[0].min_purchase_amount && totalAmount < coupon[0].min_purchase_amount) {
+            if (coupon[0].min_purchase_amount && calculatedSubtotal < coupon[0].min_purchase_amount) {
               throw new Error(`Minimum purchase amount of ${coupon[0].min_purchase_amount} required for this coupon`);
             }
 
             discountAmount = coupon[0].discount_type === 'percentage'
-              ? (totalAmount * coupon[0].discount_value) / 100
+              ? (calculatedSubtotal * coupon[0].discount_value) / 100
               : coupon[0].discount_value;
 
             if (coupon[0].max_discount_amount && discountAmount > coupon[0].max_discount_amount) {
               discountAmount = coupon[0].max_discount_amount;
             }
-
-            totalAmount -= discountAmount;
 
             // Record coupon usage
             await connection.query(
@@ -114,45 +116,66 @@ router.post('/',
           }
         }
 
-        // Calculate tax
-        const [taxRate] = await connection.query(
-          'SELECT rate FROM tax_rates WHERE country = ? AND (state = ? OR state IS NULL) AND is_active = 1 ORDER BY state IS NULL LIMIT 1',
-          [shipping_country, shipping_state]
-        );
+        // Calculate expected total
+        const expectedSubtotal = Number(calculatedSubtotal.toFixed(2));
+        const expectedShippingCost = Number(Number(shippingMethod[0].base_cost).toFixed(2));
+        const expectedDiscountAmount = Number((discountAmount || 0).toFixed(2));
+        const expectedTaxAmount = Number(tax_amount.toFixed(2));
+        const expectedTotal = Number((expectedSubtotal + expectedShippingCost - expectedDiscountAmount + expectedTaxAmount).toFixed(2));
+        const receivedTotal = Number(total_amount.toFixed(2));
 
-        const taxAmount = taxRate.length > 0 ? (totalAmount * taxRate[0].rate) / 100 : 0;
-        totalAmount += taxAmount;
+        console.log('Backend calculations:', {
+          expectedSubtotal,
+          expectedShippingCost,
+          expectedDiscountAmount,
+          expectedTaxAmount,
+          expectedTotal,
+          receivedTotal,
+          difference: Math.abs(expectedTotal - receivedTotal)
+        });
 
-        // Create order
+        // Verify total amount matches (allowing for small floating point differences)
+        if (Math.abs(expectedTotal - receivedTotal) > 0.01) {
+          throw new Error('Total amount mismatch');
+        }
+
+        // Create the order with the verified amounts
         await connection.query(
           `INSERT INTO orders (
-            id, user_id, total_amount, status, shipping_address,
-            shipping_city, shipping_state, shipping_country,
-            shipping_postal_code, shipping_method_id, shipping_cost,
-            tax_amount
-          ) VALUES (?, ?, ?, 'pending_payment', ?, ?, ?, ?, ?, ?, ?, ?)`,
+            id, user_id, total_amount, shipping_cost, 
+            tax_amount, shipping_address, shipping_city,
+            shipping_state, shipping_country, shipping_postal_code,
+            shipping_method_id, status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             orderId,
             userId,
-            totalAmount,
+            total_amount,
+            expectedShippingCost,
+            tax_amount,
             shipping_address,
             shipping_city,
             shipping_state,
             shipping_country,
             shipping_postal_code,
             shipping_method_id,
-            shippingMethod[0].base_cost,
-            taxAmount
+            'pending_payment'
           ]
         );
 
-        // Create order items and update stock
+        // Create order items
         for (const item of items) {
-          await connection.query(
-            'INSERT INTO order_items (order_id, medicine_id, name, unit, quantity, unit_price) SELECT ?, ?, name, unit, ?, price FROM medicines WHERE id = ?',
-            [orderId, item.medicine_id, item.quantity, item.medicine_id]
+          const [medicine] = await connection.query(
+            'SELECT name, unit FROM medicines WHERE id = ?',
+            [item.medicine_id]
           );
 
+          await connection.query(
+            'INSERT INTO order_items (order_id, medicine_id, name, unit, quantity, unit_price) VALUES (?, ?, ?, ?, ?, ?)',
+            [orderId, item.medicine_id, medicine[0].name, medicine[0].unit, item.quantity, item.price_per_unit]
+          );
+
+          // Update stock
           await connection.query(
             'UPDATE medicines SET stock_quantity = stock_quantity - ? WHERE id = ?',
             [item.quantity, item.medicine_id]
@@ -176,7 +199,7 @@ router.post('/',
             await sendEmail(
               user[0].email,
               'Order Confirmation',
-              `Dear ${user[0].name},\n\nYour order has been placed successfully. Order ID: ${orderId}\nTotal Amount: $${totalAmount}\n\nThank you for your purchase!`
+              `Dear ${user[0].name},\n\nYour order has been placed successfully. Order ID: ${orderId}\nTotal Amount: $${total_amount}\n\nThank you for your purchase!`
             );
           } else {
             console.warn(`No email found for user ${userId}, skipping order confirmation email`);
@@ -186,11 +209,7 @@ router.post('/',
           console.error('Failed to send order confirmation email:', emailError);
         }
 
-        res.json({
-          message: 'Order created successfully',
-          orderId,
-          totalAmount
-        });
+        res.status(201).json({ orderId });
       } catch (error) {
         await connection.rollback();
         throw error;

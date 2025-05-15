@@ -74,7 +74,8 @@ const Payment = () => {
           const pollInterval = setInterval(async () => {
             try {
               const statusResponse = await paymentAxios.post('/api/payments/verify', {
-                sourceId
+                sourceId,
+                orderId
               }, {
                 headers: {
                   'Authorization': `Bearer ${token}`

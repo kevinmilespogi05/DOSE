@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createSource, verifyPayment } from '../../utils/paymongo';
+import { createSource } from '../../utils/paymongo';
 import { Loader2 } from 'lucide-react';
 import axios from 'axios';
 
@@ -16,6 +16,106 @@ const PaymongoCheckout: React.FC<PaymongoCheckoutProps> = ({ orderId, amount, on
   const [selectedMethod, setSelectedMethod] = useState<'gcash' | 'grab_pay'>('gcash');
   const navigate = useNavigate();
 
+  // Create a custom axios instance for backend API calls
+  const apiClient = axios.create({
+    baseURL: window.location.origin,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  // Add request interceptor to handle token
+  apiClient.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
+
+  // Add response interceptor to handle token refresh
+  apiClient.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+      
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
+        
+        try {
+          // Try to refresh the token
+          const token = localStorage.getItem('token');
+          if (!token) {
+            throw new Error('No token found');
+          }
+
+          const response = await axios.post('/api/auth/refresh', {}, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          const newToken = response.data.token;
+          localStorage.setItem('token', newToken);
+          
+          // Retry the original request with new token
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return apiClient(originalRequest);
+        } catch (refreshError) {
+          // If refresh fails, redirect to login
+          localStorage.removeItem('token');
+          navigate('/login');
+          return Promise.reject(refreshError);
+        }
+      }
+      return Promise.reject(error);
+    }
+  );
+
+  const handlePayment = async () => {
+    setIsProcessing(true);
+    setError('');
+
+    try {
+      // Validate amount
+      if (amount <= 0) {
+        throw new Error('Invalid payment amount');
+      }
+
+      // Validate authentication
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Please log in to continue with payment');
+      }
+
+      console.log('Creating payment source for amount:', amount);
+      const source = await createSource(amount, selectedMethod);
+      
+      if (!source || !source.attributes || !source.attributes.redirect) {
+        throw new Error('Invalid payment source response');
+      }
+
+      // Create payment record in backend
+      await apiClient.post('/api/payments/create-source', {
+        orderId,
+        amount,
+        sourceId: source.id
+      });
+
+      // Store payment details for verification
+      localStorage.setItem('pendingOrderId', orderId);
+      localStorage.setItem('pendingSourceId', source.id);
+      
+      console.log('Redirecting to payment provider:', source.attributes.redirect.checkout_url);
+      // Redirect to payment provider
+      window.location.href = source.attributes.redirect.checkout_url;
+    } catch (err: any) {
+      console.error('Payment error:', err.response?.data || err.message);
+      setError(err instanceof Error ? err.message : 'Failed to initiate payment. Please try again.');
+      setIsProcessing(false);
+    }
+  };
+
   const paymentMethods = [
     {
       id: 'gcash',
@@ -30,80 +130,6 @@ const PaymongoCheckout: React.FC<PaymongoCheckoutProps> = ({ orderId, amount, on
       description: 'Pay with your GrabPay wallet'
     }
   ];
-
-  // Check for pending payment on component mount
-  useEffect(() => {
-    const checkPendingPayment = async () => {
-      const pendingOrderId = localStorage.getItem('pendingOrderId');
-      const pendingSourceId = localStorage.getItem('pendingSourceId');
-      
-      if (pendingOrderId && pendingSourceId) {
-        try {
-          const verification = await verifyPayment(pendingSourceId);
-          if (verification.status === 'paid') {
-            // Clear pending payment data
-            localStorage.removeItem('pendingOrderId');
-            localStorage.removeItem('pendingSourceId');
-            
-            // Update order status
-            await axios.put(`/api/orders/${pendingOrderId}/status`, {
-              status: 'paid'
-            }, {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-              }
-            });
-            
-            // Clear all items from cart
-            await axios.delete('/api/cart/clear', {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-              }
-            });
-            
-            // Show success message and close modal
-            alert('Payment successful!');
-            onClose();
-          }
-        } catch (err) {
-          console.error('Payment verification failed:', err);
-        }
-      }
-    };
-
-    checkPendingPayment();
-  }, [onClose]);
-
-  const handlePayment = async () => {
-    setIsProcessing(true);
-    setError('');
-
-    try {
-      // Validate amount
-      if (amount <= 0) {
-        throw new Error('Invalid payment amount');
-      }
-
-      console.log('Creating payment source for amount:', amount);
-      const source = await createSource(amount, selectedMethod);
-      
-      if (!source || !source.attributes || !source.attributes.redirect) {
-        throw new Error('Invalid payment source response');
-      }
-
-      // Store payment details for verification
-      localStorage.setItem('pendingOrderId', orderId);
-      localStorage.setItem('pendingSourceId', source.id);
-      
-      console.log('Redirecting to payment provider:', source.attributes.redirect.checkout_url);
-      // Redirect to payment provider
-      window.location.href = source.attributes.redirect.checkout_url;
-    } catch (err) {
-      console.error('Payment error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to initiate payment. Please try again.');
-      setIsProcessing(false);
-    }
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

@@ -31,6 +31,32 @@ interface PaymentIntentData {
   metadata?: Record<string, any>;
 }
 
+// Helper function to create base64 encoded authorization header
+const createAuthHeader = (key: string) => {
+  return btoa(key + ':');
+};
+
+// Create axios instance for PayMongo API
+const paymongoApi = axios.create({
+  baseURL: PAYMONGO_API_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Request interceptor to add authorization header
+paymongoApi.interceptors.request.use((config) => {
+  // Use public key for sources and payment methods, secret key for everything else
+  const isPublicEndpoint = config.url?.includes('/sources') || config.url?.includes('/payment_methods');
+  const key = isPublicEndpoint ? PAYMONGO_PUBLIC_KEY : PAYMONGO_SECRET_KEY;
+  
+  if (key) {
+    config.headers.Authorization = `Basic ${createAuthHeader(key)}`;
+  }
+  
+  return config;
+});
+
 export const createPaymentMethod = async (data: PaymentMethodData) => {
   try {
     if (!PAYMONGO_PUBLIC_KEY) {
@@ -39,26 +65,17 @@ export const createPaymentMethod = async (data: PaymentMethodData) => {
       throw error;
     }
 
-    const response = await axios.post(
-      `${PAYMONGO_API_URL}/payment_methods`,
-      {
-        data: {
-          attributes: {
-            type: data.type,
-            details: data.details,
-          },
-        },
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(PAYMONGO_PUBLIC_KEY)}`,
+    const response = await paymongoApi.post('/payment_methods', {
+      data: {
+        attributes: {
+          type: data.type,
+          details: data.details,
         },
       }
-    );
+    });
     return response.data.data;
-  } catch (error) {
-    console.error('Error creating payment method:', error);
+  } catch (error: any) {
+    console.error('Error creating payment method:', error.response?.data || error);
     throw error;
   }
 };
@@ -71,31 +88,22 @@ export const createPaymentIntent = async (data: PaymentIntentData) => {
       throw error;
     }
 
-    const response = await axios.post(
-      `${PAYMONGO_API_URL}/payment_intents`,
-      {
-        data: {
-          attributes: {
-            amount: Math.round(data.amount * 100), // Convert to smallest currency unit (centavos)
-            payment_method_allowed: data.payment_method_allowed,
-            payment_method_options: data.payment_method_options,
-            currency: 'PHP',
-            description: data.description,
-            statement_descriptor: data.statement_descriptor,
-            metadata: data.metadata,
-          },
-        },
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(PAYMONGO_SECRET_KEY)}`,
+    const response = await paymongoApi.post('/payment_intents', {
+      data: {
+        attributes: {
+          amount: Math.round(data.amount * 100), // Convert to smallest currency unit (centavos)
+          payment_method_allowed: data.payment_method_allowed,
+          payment_method_options: data.payment_method_options,
+          currency: 'PHP',
+          description: data.description,
+          statement_descriptor: data.statement_descriptor,
+          metadata: data.metadata,
         },
       }
-    );
+    });
     return response.data.data;
-  } catch (error) {
-    console.error('Error creating payment intent:', error);
+  } catch (error: any) {
+    console.error('Error creating payment intent:', error.response?.data || error);
     throw error;
   }
 };
@@ -114,35 +122,44 @@ export const createSource = async (amount: number, type: 'gcash' | 'grab_pay') =
       throw error;
     }
 
-    const response = await axios.post(
-      `${PAYMONGO_API_URL}/sources`,
-      {
-        data: {
-          attributes: {
-            amount: Math.round(amount * 100),
-            currency: 'PHP',
-            type,
-            redirect: {
-              success: `${FRONTEND_URL}/payment/success`,
-              failed: `${FRONTEND_URL}/payment/failed`,
-            },
-            billing: {
-              name: 'Pharmacy Customer',
-              email: 'customer@example.com',
-            },
+    console.log('Creating source with:', {
+      originalAmount: amount,
+      convertedAmount: Math.round(amount * 100),
+      type,
+      publicKey: PAYMONGO_PUBLIC_KEY ? 'Set' : 'Not Set',
+      frontendUrl: FRONTEND_URL
+    });
+
+    // PayMongo expects amount in centavos (smallest currency unit)
+    // For example: PHP 100.00 should be sent as 10000
+    const amountInCentavos = Math.round(amount * 100);
+
+    const response = await paymongoApi.post('/sources', {
+      data: {
+        attributes: {
+          amount: amountInCentavos,
+          currency: 'PHP',
+          type,
+          redirect: {
+            success: `${FRONTEND_URL}/payment/success`,
+            failed: `${FRONTEND_URL}/payment/failed`,
+          },
+          billing: {
+            name: 'Pharmacy Customer',
+            email: 'customer@example.com',
           },
         },
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(PAYMONGO_PUBLIC_KEY)}`,
-        },
       }
-    );
+    });
+    
+    console.log('Source created successfully:', {
+      sourceId: response.data.data.id,
+      amount: amount,
+      amountInCentavos: amountInCentavos
+    });
     return response.data.data;
-  } catch (error) {
-    console.error('Error creating source:', error);
+  } catch (error: any) {
+    console.error('Error creating source:', error.response?.data || error.message);
     throw error;
   }
 };
@@ -155,18 +172,10 @@ export const verifyPayment = async (sourceId: string) => {
       throw error;
     }
 
-    const response = await axios.get(
-      `${PAYMONGO_API_URL}/sources/${sourceId}`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(PAYMONGO_SECRET_KEY)}`,
-        },
-      }
-    );
+    const response = await paymongoApi.get(`/sources/${sourceId}`);
     return response.data.data;
-  } catch (error) {
-    console.error('Error verifying payment:', error);
+  } catch (error: any) {
+    console.error('Error verifying payment:', error.response?.data || error);
     throw error;
   }
 };

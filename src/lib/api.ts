@@ -10,9 +10,9 @@ const api = axios.create({
 });
 
 // Function to check if token is expired
-const isTokenExpired = (token) => {
+const isTokenExpired = (token: string) => {
   try {
-    const decoded = jwtDecode(token);
+    const decoded = jwtDecode<{ exp: number }>(token);
     const currentTime = Date.now() / 1000;
     
     if (!decoded.exp) return true; // No expiration means risky, treat as expired
@@ -23,41 +23,51 @@ const isTokenExpired = (token) => {
   }
 };
 
-// Add token to requests if it exists
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  
-  if (token) {
-    // Check if token is expired
-    if (isTokenExpired(token)) {
-      console.log('Token expired, removing from storage');
-      localStorage.removeItem('token');
-      // Redirect to login if token is expired
-      window.location.href = '/login';
-      return config;
+// Add a request interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+      if (isTokenExpired(token)) {
+        // Remove expired token
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        return Promise.reject(new Error('Token expired'));
+      }
+      
+      config.headers.Authorization = `Bearer ${token}`;
     }
     
-    config.headers.Authorization = `Bearer ${token}`;
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
-// Handle 401 and 403 responses
+// Add a response interceptor
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // Skip automatic redirection for payment API calls
-    const isPaymentApiCall = error.config?.url?.includes('/payments/');
-    
-    if ((error.response?.status === 401 || error.response?.status === 403) && !isPaymentApiCall) {
-      console.log('Unauthorized response, clearing token');
-      localStorage.removeItem('token');
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If the error is due to an expired token
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
       
-      // Only redirect to login if not already on login page
-      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/payment')) {
-        window.location.href = '/login';
-      }
+      // Clear the token and redirect to login
+      localStorage.removeItem('token');
+      window.location.href = `/login?returnUrl=${encodeURIComponent(window.location.pathname)}`;
+      
+      return Promise.reject(error);
     }
+
+    // Handle other errors
+    if (error.response?.status === 403) {
+      console.error('Access forbidden:', error.response.data);
+    }
+
     return Promise.reject(error);
   }
 );

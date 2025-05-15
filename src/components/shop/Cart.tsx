@@ -362,24 +362,40 @@ const Cart = () => {
       const orderItems = cartItems.map(item => ({
         medicine_id: item.medicine_id,
         quantity: item.quantity,
-        price_per_unit: typeof item.price === 'string' ? parseFloat(item.price) : item.price
+        price_per_unit: Number(Number(typeof item.price === 'string' ? parseFloat(item.price) : item.price).toFixed(2))
       }));
 
-      const totalAmount = calculateTotal();
+      // Calculate all components with proper rounding
+      const calculatedSubtotal = Number(subtotal.toFixed(2));
+      const calculatedDiscount = Number(discountAmount.toFixed(2));
+      const calculatedShippingCost = Number(Number(selectedShippingMethod?.base_cost || 0).toFixed(2));
+      const calculatedTaxAmount = Number(taxAmount.toFixed(2));
+      const calculatedTotal = Number((calculatedSubtotal - calculatedDiscount + calculatedShippingCost + calculatedTaxAmount).toFixed(2));
+
+      // Log all calculations
+      console.log('Order calculations:', {
+        subtotal: calculatedSubtotal,
+        discount: calculatedDiscount,
+        shippingCost: calculatedShippingCost,
+        taxAmount: calculatedTaxAmount,
+        total: calculatedTotal,
+        items: orderItems.map(item => ({
+          ...item,
+          itemTotal: Number((item.price_per_unit * item.quantity).toFixed(2))
+        }))
+      });
 
       // Create order with additional metadata
       const orderData = {
         items: orderItems,
-        total_amount: totalAmount,
-        user_id: user.id,
+        total_amount: calculatedTotal,
         shipping_address: shippingAddress.address,
         shipping_city: shippingAddress.city,
         shipping_state: shippingAddress.state,
         shipping_country: shippingAddress.country,
         shipping_postal_code: shippingAddress.postal_code,
         shipping_method_id: selectedShippingMethod.id,
-        shipping_cost: selectedShippingMethod.base_cost,
-        tax_amount: taxAmount
+        tax_amount: calculatedTaxAmount
       };
 
       // Add coupon code if one is applied
