@@ -88,14 +88,22 @@ const Orders: React.FC = () => {
           throw new Error('No authentication token found');
         }
 
-        await axios.put(`/admin/orders/${orderId}/status`, 
-          { status: newStatus },
-          {
+        if (newStatus === 'completed') {
+          await axios.put(`/admin/orders/${orderId}/complete`, {}, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
-          }
-        );
+          });
+        } else {
+          await axios.put(`/admin/orders/${orderId}/status`, 
+            { status: newStatus },
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            }
+          );
+        }
 
         // Update local state
         setOrders(orders.map(order => 
@@ -277,7 +285,7 @@ const Orders: React.FC = () => {
                         Details
                       </button>
                       
-                      {order.status === 'payment_submitted' && (
+                      {(order.status === 'payment_submitted' || order.status === 'delivered' || order.status === 'pending_payment') && (
                         <button 
                           className="text-white bg-green-600 hover:bg-green-700 rounded px-3 py-1 text-sm"
                           onClick={() => handleUpdateStatus(order.id, 'completed')}

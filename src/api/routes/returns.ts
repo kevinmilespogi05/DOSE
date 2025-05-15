@@ -25,7 +25,7 @@ router.get('/', authenticateToken, isAdmin, async (req, res) => {
           order_item_id,
           quantity,
           reason,
-          item_condition as condition,
+          item_condition as item_status,
           refund_amount
         FROM return_items
         WHERE return_id = ?
@@ -63,7 +63,7 @@ router.get('/my-returns', authenticateToken, async (req, res) => {
           order_item_id,
           quantity,
           reason,
-          item_condition as condition,
+          item_condition as item_status,
           refund_amount
         FROM return_items
         WHERE return_id = ?
@@ -291,7 +291,7 @@ router.get('/orders/:orderId/returns', authenticateToken, async (req, res) => {
         order_item_id,
         quantity,
         reason,
-        item_condition as condition,
+        item_condition as item_status,
         refund_amount
        FROM return_items 
        WHERE return_id = ?`,

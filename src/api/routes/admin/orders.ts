@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { query } from '../../../utils/db';
+import { sendEmail } from '../../utils/email';
+import { pool } from '../../../config/database';
 
 const router = Router();
 
@@ -125,6 +127,87 @@ router.get('/reports/sales', async (req, res) => {
   } catch (error) {
     console.error('Error fetching sales reports:', error);
     res.status(500).json({ message: 'Error fetching sales reports' });
+  }
+});
+
+// Mark order as completed
+router.put('/:orderId/complete', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    
+    // Start transaction
+    await pool.query('START TRANSACTION');
+
+    // Get current order status
+    const [orders] = await pool.query(
+      'SELECT status FROM orders WHERE id = ?',
+      [orderId]
+    );
+
+    if (orders.length === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const currentStatus = orders[0].status;
+    const allowedStatuses = ['delivered', 'payment_submitted', 'pending_payment'];
+
+    if (!allowedStatuses.includes(currentStatus)) {
+      await pool.query('ROLLBACK');
+      return res.status(400).json({ 
+        message: `Cannot complete order in ${currentStatus} status. Order must be in one of these statuses: ${allowedStatuses.join(', ')}`
+      });
+    }
+
+    // Update the order status
+    const [result] = await pool.query(
+      'UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ?',
+      ['completed', orderId]
+    );
+    
+    if (result.affectedRows === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(400).json({ 
+        message: 'Failed to update order status'
+      });
+    }
+
+    // Get order details for email notification
+    const [orderDetails] = await pool.query(
+      `SELECT o.*, u.email, u.username as name
+       FROM orders o
+       JOIN users u ON o.user_id = u.id
+       WHERE o.id = ?`,
+      [orderId]
+    );
+
+    if (orderDetails.length > 0) {
+      const order = orderDetails[0];
+      
+      // Send email notification
+      await sendEmail(
+        order.email,
+        'Order Completed',
+        `Dear ${order.name},
+
+Your order #${orderId} has been marked as completed. 
+If you're satisfied with your purchase, please consider leaving a review.
+If you have any issues with the received items, you can initiate a return within 7 days.
+
+Thank you for shopping with us!`
+      );
+    }
+
+    await pool.query('COMMIT');
+    
+    res.json({ 
+      message: 'Order marked as completed successfully',
+      orderId
+    });
+  } catch (error) {
+    await pool.query('ROLLBACK');
+    console.error('Error completing order:', error);
+    res.status(500).json({ message: 'Error completing order' });
   }
 });
 

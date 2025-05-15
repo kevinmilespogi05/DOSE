@@ -113,9 +113,15 @@ const OrderDetails: React.FC = () => {
       return false;
     }
 
-    // Check for existing return request that is not rejected
-    if (returnStatus && returnStatus.status !== 'rejected') {
-      console.log('Order not eligible: has a non-rejected return request');
+    // If there's a return request and it's rejected, don't show the button
+    if (returnStatus && returnStatus.status === 'rejected') {
+      console.log('Order not eligible: return request was rejected');
+      return false;
+    }
+
+    // Check for any existing return request
+    if (returnStatus) {
+      console.log('Order not eligible: has an existing return request');
       return false;
     }
 

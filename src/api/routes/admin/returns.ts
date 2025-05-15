@@ -91,7 +91,7 @@ router.post('/:returnId/:action', authenticateToken, isAdmin, async (req, res) =
       `SELECT 
         r.*,
         u.email,
-        u.name
+        u.username as name
       FROM returns r
       INNER JOIN orders o ON r.order_id = o.id
       INNER JOIN users u ON o.user_id = u.id

@@ -125,6 +125,19 @@ app.use(express.static('public'));
 // Serve files from uploads directory
 app.use('/uploads', express.static('uploads'));
 
+// Special handling for order returns - this needs to be before the route declarations
+app.use((req, res, next) => {
+  // Check if the request URL matches the pattern /api/orders/:orderId/returns
+  const match = req.url.match(/^\/api\/orders\/([^\/]+)\/returns$/);
+  if (match && (req.method === 'POST' || req.method === 'GET')) {
+    // Modify the URL to match the actual returns endpoint
+    const orderId = match[1];
+    req.url = `/api/returns/orders/${orderId}/returns`;
+    console.log(`[Returns Redirect] Redirecting ${req.method} request to ${req.url}`);
+  }
+  next();
+});
+
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/mfa', mfaRoutes);
@@ -142,19 +155,6 @@ app.use('/api/promotions', promotionsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/shipping', shippingRoutes);
 app.use('/api/inventory', inventoryRouter);
-
-// Special handling for order returns - this needs to be after the other route declarations
-app.use((req, res, next) => {
-  // Check if the request URL matches the pattern /api/orders/:orderId/returns
-  const match = req.url.match(/^\/api\/orders\/([^\/]+)\/returns$/);
-  if (match && req.method === 'POST') {
-    // Modify the URL to match the actual returns endpoint
-    const orderId = match[1];
-    req.url = `/api/returns/orders/${orderId}/returns`;
-    console.log(`[Returns Redirect] Redirecting to ${req.url}`);
-  }
-  next();
-});
 
 // In-memory storage (replace with a proper database in production)
 const users: any[] = [];
