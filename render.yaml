@@ -30,8 +30,10 @@ services:
         sync: false
 
   # Frontend service
-  - type: static
+  - type: web
     name: pharmacy-web
+    env: static
+    plan: free
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     routes:
