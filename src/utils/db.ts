@@ -2,7 +2,7 @@ import mysql from 'mysql2/promise';
 import CONFIG from '../config/config';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
-const pool = mysql.createPool({
+export const pool = mysql.createPool({
   host: CONFIG.DB.HOST,
   user: CONFIG.DB.USER,
   password: CONFIG.DB.PASSWORD,
