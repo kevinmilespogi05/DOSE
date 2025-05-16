@@ -1,8 +1,8 @@
 import express from 'express';
 import { body } from 'express-validator';
 import { authenticateToken } from '../middleware/auth.js';
-import { db } from '../../src/database/connection';
-import { generateInvoice } from '../../src/utils/invoiceGenerator';
+import { db } from '../../src/database/connection.js';
+import { generateInvoice } from '../../src/utils/invoiceGenerator.js';
 import fs from 'fs';
 import path from 'path';
 
