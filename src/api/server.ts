@@ -27,6 +27,7 @@ import couponRoutes from './routes/coupons';
 import promotionsRoutes from './routes/promotions';
 import shippingRoutes from './routes/admin/shipping';
 import inventoryRouter from './routes/inventory';
+import { initializeDatabase } from '../database/init';
 
 // Authentication middleware
 const authenticateToken = (req: any, res: any, next: any) => {
@@ -1796,7 +1797,20 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// Listen
-app.listen(CONFIG.PORT, () => {
-  console.log(`Server running on port ${CONFIG.PORT}`);
-});
+// Initialize database and start server
+async function startServer() {
+  try {
+    // Initialize database first
+    await initializeDatabase();
+    
+    // Then start the server
+    app.listen(CONFIG.PORT, () => {
+      console.log(`Server running on port ${CONFIG.PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
