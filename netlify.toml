@@ -14,6 +14,6 @@
 # Proxy API requests to your backend server
 [[redirects]]
   from = "/api/*"
-  to = "https://your-backend-api-url.com/api/:splat"
+  to = "/:splat"  # This will be configured via VITE_API_URL environment variable
   status = 200
   force = true 

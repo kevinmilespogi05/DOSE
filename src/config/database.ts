@@ -6,12 +6,16 @@ dotenv.config();
 
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '3306'),
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '', 
   database: process.env.DB_NAME || 'project_db',
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  ssl: process.env.NODE_ENV === 'production' ? {
+    rejectUnauthorized: false
+  } : undefined
 };
 
 // Create a connection pool
@@ -22,6 +26,7 @@ async function testConnection() {
   try {
     const connection = await pool.getConnection();
     console.log('Database connected successfully');
+    console.log(`Connected to ${dbConfig.database} at ${dbConfig.host}:${dbConfig.port}`);
     connection.release();
     return true;
   } catch (error) {
