@@ -1,17 +1,26 @@
+export type OrderStatus = 
+  | 'pending_payment'
+  | 'payment_submitted'
+  | 'payment_approved'
+  | 'processing'
+  | 'completed'
+  | 'cancelled';
+
 export interface OrderItem {
-  medicine_id: string;
+  medicine_id: number;
+  medicine_name: string;
   quantity: number;
-  price_per_unit: number;
+  unit_price: number;
 }
 
 export interface Order {
   id: string;
-  user_id: string;
+  user_id: number;
   total_amount: number;
-  status: 'pending' | 'processing' | 'completed' | 'cancelled';
-  created_at: Date;
-  updated_at: Date;
-  items?: OrderItem[];
+  status: OrderStatus;
+  created_at: string;
+  updated_at: string;
+  items: OrderItem[];
 }
 
 export interface Payment {

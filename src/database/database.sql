@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 15, 2025 at 06:37 PM
+-- Generation Time: May 16, 2025 at 05:27 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -43,7 +43,9 @@ INSERT INTO `cart` (`id`, `user_id`, `created_at`, `updated_at`) VALUES
 (2, 3, '2025-05-12 11:52:28', '2025-05-12 11:52:28'),
 (3, 7, '2025-05-13 02:05:45', '2025-05-13 02:05:45'),
 (4, 8, '2025-05-13 16:12:40', '2025-05-13 16:12:40'),
-(5, 4, '2025-05-13 18:04:23', '2025-05-13 18:04:23');
+(5, 4, '2025-05-13 18:04:23', '2025-05-13 18:04:23'),
+(6, 9, '2025-05-16 02:40:08', '2025-05-16 02:40:08'),
+(7, 10, '2025-05-16 03:01:33', '2025-05-16 03:01:33');
 
 -- --------------------------------------------------------
 
@@ -66,8 +68,11 @@ CREATE TABLE `cart_items` (
 
 INSERT INTO `cart_items` (`id`, `cart_id`, `medicine_id`, `quantity`, `created_at`, `updated_at`) VALUES
 (1, 2, 27, 1, '2025-05-12 17:03:06', '2025-05-12 17:03:06'),
-(7, 4, 18, 2, '2025-05-14 16:34:50', '2025-05-15 15:10:31'),
-(9, 3, 18, 1, '2025-05-15 15:22:46', '2025-05-15 15:22:46');
+(9, 3, 18, 1, '2025-05-15 15:22:46', '2025-05-15 15:22:46'),
+(10, 4, 18, 1, '2025-05-15 17:22:49', '2025-05-15 17:22:49'),
+(11, 4, 21, 1, '2025-05-15 17:34:39', '2025-05-15 17:34:39'),
+(12, 6, 27, 1, '2025-05-16 02:40:20', '2025-05-16 02:40:20'),
+(13, 6, 18, 1, '2025-05-16 02:40:21', '2025-05-16 02:40:21');
 
 -- --------------------------------------------------------
 
@@ -166,16 +171,16 @@ CREATE TABLE `medicines` (
 INSERT INTO `medicines` (`id`, `name`, `generic_name`, `brand`, `category_id`, `description`, `price`, `stock_quantity`, `unit`, `expiry_date`, `supplier_id`, `requires_prescription`, `min_stock_level`, `max_stock_level`, `reorder_point`, `image_url`, `barcode`, `created_at`, `updated_at`, `average_rating`) VALUES
 (16, 'Cetirizine', 'Cetirizine', 'AllerCare', 4, NULL, 10.00, 27, 'tablets', '2027-11-15', 1, 1, 10, 100, 20, '/images/medicines/medicine-1742266313085.png', NULL, '2025-03-18 02:51:17', '2025-03-18 07:22:52', 0.00),
 (17, 'Omeprazole', 'Omeprazole', 'Omezol', 3, NULL, 15.00, 50, 'tablets', '2026-12-12', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267049716.png', NULL, '2025-03-18 03:04:09', '2025-03-18 03:05:16', 0.00),
-(18, 'Amoxicillin', 'Amoxicillin', 'AmoCare', 1, NULL, 25.00, 50, 'capsules', '2025-09-05', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267157362.png', NULL, '2025-03-18 03:05:57', '2025-05-15 15:27:46', 0.00),
+(18, 'Amoxicillin', 'Amoxicillin', 'AmoCare', 1, NULL, 25.00, 19, 'capsules', '2025-09-05', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267157362.png', NULL, '2025-03-18 03:05:57', '2025-05-16 02:40:29', 0.00),
 (19, 'Losartan', 'Losartan Potassium', 'CardioSafe', 6, NULL, 20.00, 40, 'tablets', '2027-11-15', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267241910.png', NULL, '2025-03-18 03:06:41', '2025-03-18 03:07:22', 0.00),
 (20, 'Paracetamol', 'Paracetamol', 'PainAway', 2, NULL, 5.00, 90, 'tablets', '2026-03-22', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267302037.png', NULL, '2025-03-18 03:08:22', '2025-03-18 03:08:22', 0.00),
-(21, 'Ascorbic Acid', 'Vitamin C', 'VitaBoost', 5, NULL, 12.00, 60, 'tablets', '2027-10-30', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742267346487.png', NULL, '2025-03-18 03:09:06', '2025-03-18 03:09:06', 0.00),
+(21, 'Ascorbic Acid', 'Vitamin C', 'VitaBoost', 5, NULL, 12.00, 46, 'tablets', '2027-10-30', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742267346487.png', NULL, '2025-03-18 03:09:06', '2025-05-16 02:10:15', 0.00),
 (22, 'Multivitamins', 'Multivitamins', 'VitaComplete', 5, NULL, 20.00, 75, 'tablets', '2027-03-14', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267845660.png', NULL, '2025-03-18 03:17:25', '2025-03-18 03:17:25', 0.00),
 (23, 'Ferrous Sulfate', 'Iron Supplement', 'FerroStrong', 5, NULL, 18.00, 45, 'capsules', '2026-12-28', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742267882304.png', NULL, '2025-03-18 03:18:02', '2025-03-18 03:18:02', 0.00),
 (24, 'Mefenamic Acid', 'Mefenamic Acid', 'Mefenax', 2, NULL, 12.00, 80, 'capsules', '2025-07-05', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742267932238.png', NULL, '2025-03-18 03:18:52', '2025-03-18 03:18:52', 0.00),
 (25, 'Ibuprofen', 'Ibuprofen', 'IbuRelief', 2, NULL, 8.00, 70, 'tablets', '2026-10-11', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742267991905.png', NULL, '2025-03-18 03:19:52', '2025-03-18 03:19:52', 0.00),
 (26, 'Metoprolol', 'Metoprolol', 'BetaCare', 6, NULL, 18.00, 48, 'tablets', '2027-09-22', 1, 0, 10, 100, 20, '/images/medicines/medicine-1742268044871.png', NULL, '2025-03-18 03:20:44', '2025-03-18 03:20:44', 0.00),
-(27, 'Amlodipine', 'Amlodipine', 'CardioTone', 4, NULL, 22.00, 1, 'capsules', '2003-05-11', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268082971.png', NULL, '2025-03-18 03:21:23', '2025-05-15 04:03:38', 4.25),
+(27, 'Amlodipine', 'Amlodipine', 'CardioTone', 4, NULL, 22.00, 0, 'capsules', '2003-05-11', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268082971.png', NULL, '2025-03-18 03:21:23', '2025-05-16 02:40:29', 4.25),
 (28, 'Loratadine', 'Loratadine', 'LoraFast', 4, NULL, 12.00, 35, 'tablets', '2026-11-15', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268137814.png', NULL, '2025-03-18 03:22:18', '2025-03-18 03:22:18', 0.00),
 (29, 'Cefalexin', 'Cefalexin', 'CefaPlus', 1, NULL, 28.00, 55, 'capsules', '2026-04-02', 2, 0, 10, 100, 20, '/images/medicines/medicine-1742268186917.png', NULL, '2025-03-18 03:23:07', '2025-03-18 03:23:07', 0.00),
 (30, 'Azithromycin', 'Azithromycin', 'AzitroMed', 1, NULL, 30.00, 60, 'tablets', '2027-06-18', 3, 0, 10, 100, 20, '/images/medicines/medicine-1742268241000.png', NULL, '2025-03-18 03:24:01', '2025-03-18 03:24:01', 0.00),
@@ -254,27 +259,52 @@ CREATE TABLE `orders` (
 INSERT INTO `orders` (`id`, `user_id`, `total_amount`, `status`, `payment_method`, `shipping_address`, `shipping_city`, `shipping_state`, `shipping_country`, `shipping_postal_code`, `shipping_method_id`, `shipping_cost`, `tax_amount`, `tracking_number`, `created_at`, `updated_at`) VALUES
 ('04d2cd12-4f90-4f7e-b6b9-538afc99fc6d', 7, 25100.00, 'completed', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-15 15:22:51', '2025-05-15 15:52:39'),
 ('077ae5ce-df5c-4d2a-914c-621a7d7e620e', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:42:58', '2025-05-14 16:42:58'),
+('0b811ec7-c59a-4e1a-a061-a8540ffa4315', 8, 139.74, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 742.00, NULL, '2025-05-15 17:34:47', '2025-05-15 17:59:51'),
 ('0fa38b63-7a0c-45a8-b034-8cd56ac8f68f', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:46:12', '2025-05-14 16:46:12'),
-('1192cb53-919b-4bd2-addc-f07ba974a170', 8, 47.00, 'completed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-14 04:37:28', '2025-05-14 06:52:49'),
+('0fda86aa-d9bc-4441-84ae-2e8e25923982', 8, 25100.01, 'pending_payment', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 502.00, NULL, '2025-05-15 17:23:49', '2025-05-15 17:23:49'),
+('1192cb53-919b-4bd2-addc-f07ba974a170', 8, 47.00, 'completed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-14 04:37:28', '2025-05-15 17:59:51'),
 ('14f9f93c-de45-4cc5-bbaa-64f7aa9db283', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:40:19', '2025-05-14 16:40:19'),
+('19b28264-2537-491a-9d2f-ada330b67883', 8, 50100.00, 'pending_payment', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 1002.00, NULL, '2025-05-15 17:13:17', '2025-05-15 17:13:17'),
+('1b23e79a-690b-433f-b9fe-7a017108e87a', 8, 139.74, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 742.00, NULL, '2025-05-15 17:50:17', '2025-05-15 17:59:51'),
 ('1fac3243-e091-4899-ae65-9670165723cd', 8, 50100.00, 'completed', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-15 15:20:14', '2025-05-15 15:53:55'),
 ('28f35942-cb43-4aef-9ead-0e934ee56b42', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:40:39', '2025-05-14 16:40:39'),
 ('2c3fb0a1-af92-419b-80a6-14e9d6cbec08', 8, 50099.00, 'completed', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-15 15:12:49', '2025-05-15 15:54:05'),
+('31f7270f-87bb-4bc6-9623-e506cb2e54af', 8, 50100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 1002.00, NULL, '2025-05-15 17:19:37', '2025-05-15 17:19:37'),
+('3406d021-4f9f-4d0d-87c3-dcd71c46d834', 8, 140.00, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 742.00, NULL, '2025-05-15 17:56:25', '2025-05-15 17:59:51'),
 ('42e9e8bd-ba53-407f-bd77-dea2a781a9f3', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:41:01', '2025-05-14 16:41:01'),
+('4894d43a-95c1-4449-801f-ec79ef952547', 8, 50100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 1002.00, NULL, '2025-05-15 17:20:06', '2025-05-15 17:20:06'),
 ('4acf4613-7008-44ea-b3d5-3e4587f87761', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:43:43', '2025-05-14 16:43:43'),
 ('53882391-c98f-43aa-93d8-2884e2099784', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:40:05', '2025-05-14 16:40:05'),
 ('579fbc01-24b2-4c30-8d27-503a71778ee9', 7, 25100.00, 'completed', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-15 15:27:46', '2025-05-15 15:52:34'),
 ('5849cb66-93d0-4236-b111-997ca391ba6c', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:38:05', '2025-05-14 16:38:05'),
 ('67af2a34-e8d7-431d-aeb1-c0cee9903177', 8, 42.00, 'pending_payment', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-14 04:30:49', '2025-05-14 04:30:49'),
 ('67c5a565-0b88-44ff-988a-8ab4f46f54ce', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:53:35', '2025-05-14 16:53:35'),
-('7e2a80f8-1c6d-4a48-836a-67da2b706bed', 8, 42.00, 'completed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-14 04:32:50', '2025-05-14 04:33:45'),
+('6b8b03d4-caf6-4f6c-a4d0-d865846a6069', 8, 139.74, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 742.00, NULL, '2025-05-15 17:48:29', '2025-05-15 17:59:51'),
+('71cf4e37-a1f8-43c4-b8d0-ca096d74b8df', 8, 139.74, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 2.74, NULL, '2025-05-15 18:21:11', '2025-05-15 18:21:14'),
+('7e2a80f8-1c6d-4a48-836a-67da2b706bed', 8, 42.00, 'completed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-14 04:32:50', '2025-05-15 17:59:51'),
+('86207ba8-b804-43af-8122-abad2852f952', 8, 50100.00, 'pending_payment', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 1002.00, NULL, '2025-05-15 17:10:44', '2025-05-15 17:10:44'),
+('87829297-d547-4962-9552-972a43e8c235', 8, 139.74, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 2.74, NULL, '2025-05-15 18:17:44', '2025-05-15 18:17:48'),
+('89899126-1fcb-4e15-805c-6913b793f159', 8, 139.74, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 742.00, NULL, '2025-05-15 17:39:54', '2025-05-15 17:59:51'),
+('8ab6a4aa-befb-4781-95c8-50707a0ad5a3', 8, 37100.01, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 742.00, NULL, '2025-05-15 18:00:18', '2025-05-15 18:00:23'),
+('90612f9a-bec2-4330-9fd3-b5341641c579', 8, 139.74, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 2.74, NULL, '2025-05-16 02:10:15', '2025-05-16 02:10:20'),
+('96bf31b2-4f47-4fb8-9127-c8992b065bc3', 8, 127.50, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 502.00, NULL, '2025-05-15 17:32:10', '2025-05-15 17:59:51'),
+('af3669b1-a2b7-45dd-9386-31e33abf7705', 8, 139.74, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 742.00, NULL, '2025-05-15 17:47:28', '2025-05-15 17:59:51'),
 ('afcfe5e0-afee-42fc-b53f-da1c36040c78', 8, 50100.00, 'completed', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-15 15:13:24', '2025-05-15 15:54:00'),
 ('b27f6b1e-8593-4510-89b3-6fe70de2d24a', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:44:44', '2025-05-14 16:44:44'),
 ('b637fea4-5288-4b5a-91e3-53ddd391bc1e', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:35:06', '2025-05-14 16:35:06'),
 ('bdae65c6-01df-4426-b6cc-8fd03711b68c', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:41:39', '2025-05-14 16:41:39'),
+('be7e73b7-f720-4765-b736-8e787d8a20a8', 9, 149.94, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 2.94, NULL, '2025-05-16 02:40:29', '2025-05-16 02:40:34'),
+('c3533cdb-a366-425a-9d0f-033049cffd7f', 8, 50100.00, 'pending_payment', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 1002.00, NULL, '2025-05-15 17:16:13', '2025-05-15 17:16:13'),
+('cb2fad97-91ec-4174-b3ff-ef106bcb1fd6', 8, 139.74, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 742.00, NULL, '2025-05-15 17:44:55', '2025-05-15 17:59:51'),
 ('d077e12b-4783-41ca-8275-7d3e77e9c5b5', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:48:49', '2025-05-14 16:48:49'),
 ('d10f2a67-832f-4cc3-902f-e88bc3c05e06', 8, 44100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:31:10', '2025-05-14 16:31:10'),
-('db578a0f-2153-477f-8e13-6ca3f9949802', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:46:27', '2025-05-14 16:46:27');
+('d7583680-e118-4b46-9dab-5127f8b61197', 8, 50100.00, 'pending_payment', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 1002.00, NULL, '2025-05-15 17:17:55', '2025-05-15 17:17:55'),
+('d83faf12-5e30-47b6-996e-dd450e1ecc49', 8, 139.74, 'pending_payment', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 2.74, NULL, '2025-05-15 18:20:20', '2025-05-15 18:20:20'),
+('db578a0f-2153-477f-8e13-6ca3f9949802', 8, 25100.00, 'pending_payment', NULL, 'Purok 5A ', 'Castillejos', 'Zambales', 'Philippines', '2208', 1, 100.00, 0.00, NULL, '2025-05-14 16:46:27', '2025-05-14 16:46:27'),
+('dbae05cb-5902-44be-8dbf-22dd0c33f086', 8, 139.74, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 742.00, NULL, '2025-05-15 17:41:32', '2025-05-15 17:59:51'),
+('e23f4379-dec2-4d1e-8805-9dfe8418208a', 8, 139.74, 'payment_submitted', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 742.00, NULL, '2025-05-15 17:38:16', '2025-05-15 17:59:51'),
+('f4aa7833-bad3-483b-83a1-0780b27b42e8', 8, 25100.01, 'pending_payment', NULL, 'San Pablo', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 502.00, NULL, '2025-05-15 17:22:55', '2025-05-15 17:22:55'),
+('feae1e07-910a-48f5-8c43-a18abfde46af', 8, 25100.01, 'pending_payment', NULL, '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 1, 100.00, 502.00, NULL, '2025-05-15 17:27:38', '2025-05-15 17:27:38');
 
 -- --------------------------------------------------------
 
@@ -344,7 +374,47 @@ INSERT INTO `order_items` (`id`, `order_id`, `medicine_id`, `name`, `unit`, `qua
 (23, 'afcfe5e0-afee-42fc-b53f-da1c36040c78', 18, 'Amoxicillin', 'capsules', 2, 25.00, '2025-05-15 15:13:24'),
 (24, '1fac3243-e091-4899-ae65-9670165723cd', 18, 'Amoxicillin', 'capsules', 2, 25.00, '2025-05-15 15:20:14'),
 (25, '04d2cd12-4f90-4f7e-b6b9-538afc99fc6d', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 15:22:51'),
-(26, '579fbc01-24b2-4c30-8d27-503a71778ee9', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 15:27:46');
+(26, '579fbc01-24b2-4c30-8d27-503a71778ee9', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 15:27:46'),
+(27, '86207ba8-b804-43af-8122-abad2852f952', 18, 'Amoxicillin', 'capsules', 2, 25.00, '2025-05-15 17:10:44'),
+(28, '19b28264-2537-491a-9d2f-ada330b67883', 18, 'Amoxicillin', 'capsules', 2, 25.00, '2025-05-15 17:13:17'),
+(29, 'c3533cdb-a366-425a-9d0f-033049cffd7f', 18, 'Amoxicillin', 'capsules', 2, 25.00, '2025-05-15 17:16:13'),
+(30, 'd7583680-e118-4b46-9dab-5127f8b61197', 18, 'Amoxicillin', 'capsules', 2, 25.00, '2025-05-15 17:17:55'),
+(31, '31f7270f-87bb-4bc6-9623-e506cb2e54af', 18, 'Amoxicillin', 'capsules', 2, 25.00, '2025-05-15 17:19:37'),
+(32, '4894d43a-95c1-4449-801f-ec79ef952547', 18, 'Amoxicillin', 'capsules', 2, 25.00, '2025-05-15 17:20:06'),
+(33, 'f4aa7833-bad3-483b-83a1-0780b27b42e8', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 17:22:55'),
+(34, '0fda86aa-d9bc-4441-84ae-2e8e25923982', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 17:23:49'),
+(35, 'feae1e07-910a-48f5-8c43-a18abfde46af', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 17:27:38'),
+(36, '96bf31b2-4f47-4fb8-9127-c8992b065bc3', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 17:32:10'),
+(37, '0b811ec7-c59a-4e1a-a061-a8540ffa4315', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 17:34:47'),
+(38, '0b811ec7-c59a-4e1a-a061-a8540ffa4315', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-15 17:34:47'),
+(39, 'e23f4379-dec2-4d1e-8805-9dfe8418208a', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 17:38:16'),
+(40, 'e23f4379-dec2-4d1e-8805-9dfe8418208a', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-15 17:38:16'),
+(41, '89899126-1fcb-4e15-805c-6913b793f159', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 17:39:54'),
+(42, '89899126-1fcb-4e15-805c-6913b793f159', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-15 17:39:54'),
+(43, 'dbae05cb-5902-44be-8dbf-22dd0c33f086', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 17:41:32'),
+(44, 'dbae05cb-5902-44be-8dbf-22dd0c33f086', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-15 17:41:32'),
+(45, 'cb2fad97-91ec-4174-b3ff-ef106bcb1fd6', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 17:44:55'),
+(46, 'cb2fad97-91ec-4174-b3ff-ef106bcb1fd6', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-15 17:44:55'),
+(47, 'af3669b1-a2b7-45dd-9386-31e33abf7705', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 17:47:28'),
+(48, 'af3669b1-a2b7-45dd-9386-31e33abf7705', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-15 17:47:28'),
+(49, '6b8b03d4-caf6-4f6c-a4d0-d865846a6069', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 17:48:29'),
+(50, '6b8b03d4-caf6-4f6c-a4d0-d865846a6069', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-15 17:48:29'),
+(51, '1b23e79a-690b-433f-b9fe-7a017108e87a', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 17:50:17'),
+(52, '1b23e79a-690b-433f-b9fe-7a017108e87a', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-15 17:50:17'),
+(53, '3406d021-4f9f-4d0d-87c3-dcd71c46d834', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 17:56:25'),
+(54, '3406d021-4f9f-4d0d-87c3-dcd71c46d834', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-15 17:56:25'),
+(55, '8ab6a4aa-befb-4781-95c8-50707a0ad5a3', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 18:00:18'),
+(56, '8ab6a4aa-befb-4781-95c8-50707a0ad5a3', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-15 18:00:18'),
+(57, '87829297-d547-4962-9552-972a43e8c235', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 18:17:44'),
+(58, '87829297-d547-4962-9552-972a43e8c235', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-15 18:17:44'),
+(59, 'd83faf12-5e30-47b6-996e-dd450e1ecc49', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 18:20:20'),
+(60, 'd83faf12-5e30-47b6-996e-dd450e1ecc49', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-15 18:20:20'),
+(61, '71cf4e37-a1f8-43c4-b8d0-ca096d74b8df', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-15 18:21:11'),
+(62, '71cf4e37-a1f8-43c4-b8d0-ca096d74b8df', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-15 18:21:11'),
+(63, '90612f9a-bec2-4330-9fd3-b5341641c579', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-16 02:10:15'),
+(64, '90612f9a-bec2-4330-9fd3-b5341641c579', 21, 'Ascorbic Acid', 'tablets', 1, 12.00, '2025-05-16 02:10:15'),
+(65, 'be7e73b7-f720-4765-b736-8e787d8a20a8', 27, 'Amlodipine', 'capsules', 1, 22.00, '2025-05-16 02:40:29'),
+(66, 'be7e73b7-f720-4765-b736-8e787d8a20a8', 18, 'Amoxicillin', 'capsules', 1, 25.00, '2025-05-16 02:40:29');
 
 -- --------------------------------------------------------
 
@@ -368,6 +438,21 @@ CREATE TABLE `order_tracking` (
 INSERT INTO `order_tracking` (`id`, `order_id`, `status`, `description`, `location`, `created_at`) VALUES
 ('1747198825493', '1192cb53-919b-4bd2-addc-f07ba974a170', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-14 05:00:25'),
 ('1747198825498', '1192cb53-919b-4bd2-addc-f07ba974a170', 'shipping', 'Your order is on the way!', 'Dispatch Center', '2025-05-14 05:00:25'),
+('1747330334172', '96bf31b2-4f47-4fb8-9127-c8992b065bc3', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-15 17:32:14'),
+('1747330491639', '0b811ec7-c59a-4e1a-a061-a8540ffa4315', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-15 17:34:51'),
+('1747330700483', 'e23f4379-dec2-4d1e-8805-9dfe8418208a', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-15 17:38:20'),
+('1747330797865', '89899126-1fcb-4e15-805c-6913b793f159', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-15 17:39:57'),
+('1747330896160', 'dbae05cb-5902-44be-8dbf-22dd0c33f086', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-15 17:41:36'),
+('1747331099030', 'cb2fad97-91ec-4174-b3ff-ef106bcb1fd6', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-15 17:44:59'),
+('1747331253018', 'af3669b1-a2b7-45dd-9386-31e33abf7705', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-15 17:47:33'),
+('1747331314026', '6b8b03d4-caf6-4f6c-a4d0-d865846a6069', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-15 17:48:34'),
+('1747331421266', '1b23e79a-690b-433f-b9fe-7a017108e87a', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-15 17:50:21'),
+('1747331790064', '3406d021-4f9f-4d0d-87c3-dcd71c46d834', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-15 17:56:30'),
+('1747332023669', '8ab6a4aa-befb-4781-95c8-50707a0ad5a3', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-15 18:00:23'),
+('1747333068804', '87829297-d547-4962-9552-972a43e8c235', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-15 18:17:48'),
+('1747333274853', '71cf4e37-a1f8-43c4-b8d0-ca096d74b8df', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-15 18:21:14'),
+('1747361420774', '90612f9a-bec2-4330-9fd3-b5341641c579', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-16 02:10:20'),
+('1747363234245', 'be7e73b7-f720-4765-b736-8e787d8a20a8', 'processing', 'Payment submitted and being verified.', NULL, '2025-05-16 02:40:34'),
 ('67af2a34-e8d7-431d-aeb1-c0cee9903177-1747197370', '67af2a34-e8d7-431d-aeb1-c0cee9903177', 'pending', 'Order is pending payment', NULL, '2025-05-14 04:36:10'),
 ('7e2a80f8-1c6d-4a48-836a-67da2b706bed-1747197370', '7e2a80f8-1c6d-4a48-836a-67da2b706bed', 'delivered', 'Order has been delivered successfully', NULL, '2025-05-14 04:36:10');
 
@@ -399,10 +484,25 @@ CREATE TABLE `payments` (
 --
 
 INSERT INTO `payments` (`id`, `order_id`, `amount`, `payment_method`, `source_id`, `payment_intent_id`, `reference_number`, `payment_proof_url`, `status`, `created_at`, `updated_at`, `invoice_number`, `invoice_generated_at`, `invoice_path`) VALUES
-('1747197177590', '7e2a80f8-1c6d-4a48-836a-67da2b706bed', 42.00, 'gcash', 'src_tVX1MV61V7u2AiseY24H5sEh', NULL, NULL, NULL, 'paid', '2025-05-14 04:32:57', '2025-05-14 06:05:06', 'INV-202505-1747197177590', '2025-05-14 06:05:06', 'C:\\Users\\kevin\\Desktop\\DOSE\\uploads\\invoices\\invoice-INV-202505-1747197177590.pdf'),
-('1747197177600', '7e2a80f8-1c6d-4a48-836a-67da2b706bed', 42.00, 'gcash', 'src_tVX1MV61V7u2AiseY24H5sEh', NULL, NULL, NULL, 'processing', '2025-05-14 04:32:57', '2025-05-14 04:32:57', NULL, NULL, NULL),
-('1747197455156', '1192cb53-919b-4bd2-addc-f07ba974a170', 47.00, 'gcash', 'src_FNsJooz87aFFTkyTwtyyKf9Y', NULL, NULL, NULL, 'paid', '2025-05-14 04:37:35', '2025-05-14 06:08:11', 'INV-202505-1747197455156', '2025-05-14 06:08:11', 'C:\\Users\\kevin\\Desktop\\DOSE\\uploads\\invoices\\invoice-INV-202505-1747197455156.pdf'),
-('1747197455164', '1192cb53-919b-4bd2-addc-f07ba974a170', 47.00, 'gcash', 'src_FNsJooz87aFFTkyTwtyyKf9Y', NULL, NULL, NULL, 'processing', '2025-05-14 04:37:35', '2025-05-14 04:37:35', NULL, NULL, NULL);
+('1747197177590', '7e2a80f8-1c6d-4a48-836a-67da2b706bed', 42.00, 'gcash', 'src_tVX1MV61V7u2AiseY24H5sEh', NULL, NULL, NULL, 'paid', '2025-05-14 04:32:57', '2025-05-15 17:59:51', 'INV-202505-1747197177590', '2025-05-14 06:05:06', 'C:\\Users\\kevin\\Desktop\\DOSE\\uploads\\invoices\\invoice-INV-202505-1747197177590.pdf'),
+('1747197177600', '7e2a80f8-1c6d-4a48-836a-67da2b706bed', 42.00, 'gcash', 'src_tVX1MV61V7u2AiseY24H5sEh', NULL, NULL, NULL, 'processing', '2025-05-14 04:32:57', '2025-05-15 17:59:51', NULL, NULL, NULL),
+('1747197455156', '1192cb53-919b-4bd2-addc-f07ba974a170', 47.00, 'gcash', 'src_FNsJooz87aFFTkyTwtyyKf9Y', NULL, NULL, NULL, 'paid', '2025-05-14 04:37:35', '2025-05-15 17:59:51', 'INV-202505-1747197455156', '2025-05-14 06:08:11', 'C:\\Users\\kevin\\Desktop\\DOSE\\uploads\\invoices\\invoice-INV-202505-1747197455156.pdf'),
+('1747197455164', '1192cb53-919b-4bd2-addc-f07ba974a170', 47.00, 'gcash', 'src_FNsJooz87aFFTkyTwtyyKf9Y', NULL, NULL, NULL, 'processing', '2025-05-14 04:37:35', '2025-05-15 17:59:51', NULL, NULL, NULL),
+('1747330334163', '96bf31b2-4f47-4fb8-9127-c8992b065bc3', 127.50, 'gcash', 'src_dyqTrC9EMAtueuKjXxnDDCNY', NULL, NULL, NULL, 'pending', '2025-05-15 17:32:14', '2025-05-15 17:59:51', NULL, NULL, NULL),
+('1747330491624', '0b811ec7-c59a-4e1a-a061-a8540ffa4315', 139.74, 'gcash', 'src_8tqHTAUeSZchj8VB6zT1WtzP', NULL, NULL, NULL, 'pending', '2025-05-15 17:34:51', '2025-05-15 17:59:51', NULL, NULL, NULL),
+('1747330700474', 'e23f4379-dec2-4d1e-8805-9dfe8418208a', 139.74, 'gcash', 'src_xxw46FPSi8S5gbxrcxXgbtAj', NULL, NULL, NULL, 'pending', '2025-05-15 17:38:20', '2025-05-15 17:59:51', NULL, NULL, NULL),
+('1747330797860', '89899126-1fcb-4e15-805c-6913b793f159', 139.74, 'gcash', 'src_yTbbxHFX6zdse7bw1MAtyrfz', NULL, NULL, NULL, 'pending', '2025-05-15 17:39:57', '2025-05-15 17:59:51', NULL, NULL, NULL),
+('1747330896152', 'dbae05cb-5902-44be-8dbf-22dd0c33f086', 139.74, 'gcash', 'src_tXQiPcAjVQJaVS9Wx7nTShye', NULL, NULL, NULL, 'pending', '2025-05-15 17:41:36', '2025-05-15 17:59:51', NULL, NULL, NULL),
+('1747331099025', 'cb2fad97-91ec-4174-b3ff-ef106bcb1fd6', 139.74, 'gcash', 'src_UsjHsXeK5WSnbdkXTvUYgERd', NULL, NULL, NULL, 'pending', '2025-05-15 17:44:59', '2025-05-15 17:59:51', NULL, NULL, NULL),
+('1747331253009', 'af3669b1-a2b7-45dd-9386-31e33abf7705', 139.74, 'gcash', 'src_HBsc7YR74QhWhGf6Sm6S5hd3', NULL, NULL, NULL, 'pending', '2025-05-15 17:47:33', '2025-05-15 17:59:51', NULL, NULL, NULL),
+('1747331314020', '6b8b03d4-caf6-4f6c-a4d0-d865846a6069', 139.74, 'gcash', 'src_HYDkhdZwcjZXrdGvzyr6U3DG', NULL, NULL, NULL, 'pending', '2025-05-15 17:48:34', '2025-05-15 17:59:51', NULL, NULL, NULL),
+('1747331421261', '1b23e79a-690b-433f-b9fe-7a017108e87a', 139.74, 'gcash', 'src_4ciLQLEXSsuK3uy1Mz3Gzi99', NULL, NULL, NULL, 'pending', '2025-05-15 17:50:21', '2025-05-15 17:59:51', NULL, NULL, NULL),
+('1747331790057', '3406d021-4f9f-4d0d-87c3-dcd71c46d834', 140.00, 'gcash', 'src_SJyVUTrh4U8yGYo2dbbpRMye', NULL, NULL, NULL, 'pending', '2025-05-15 17:56:30', '2025-05-15 17:59:31', NULL, NULL, NULL),
+('1747332023662', '8ab6a4aa-befb-4781-95c8-50707a0ad5a3', 139.74, 'gcash', 'src_g8keT6My5inrmeDWcTct9vJN', NULL, NULL, NULL, 'pending', '2025-05-15 18:00:23', '2025-05-15 18:00:23', NULL, NULL, NULL),
+('1747333068794', '87829297-d547-4962-9552-972a43e8c235', 139.74, 'gcash', 'src_xd8oNWQQBYSYwwMjdUmxtDuA', NULL, NULL, NULL, 'pending', '2025-05-15 18:17:48', '2025-05-15 18:17:48', NULL, NULL, NULL),
+('1747333274845', '71cf4e37-a1f8-43c4-b8d0-ca096d74b8df', 139.74, 'gcash', 'src_snJRWA59iZWr8s8Z3d4G4dPe', NULL, NULL, NULL, 'pending', '2025-05-15 18:21:14', '2025-05-15 18:21:14', NULL, NULL, NULL),
+('1747361420766', '90612f9a-bec2-4330-9fd3-b5341641c579', 139.74, 'gcash', 'src_qfrknea3rjNSmQMhgMJcvBKe', NULL, NULL, NULL, 'pending', '2025-05-16 02:10:20', '2025-05-16 02:10:20', NULL, NULL, NULL),
+('1747363234238', 'be7e73b7-f720-4765-b736-8e787d8a20a8', 149.94, 'gcash', 'src_hkBv5dkyZoR8tE8NyqykV2RC', NULL, NULL, NULL, 'pending', '2025-05-16 02:40:34', '2025-05-16 02:40:34', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -676,6 +776,13 @@ CREATE TABLE `tax_rates` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `tax_rates`
+--
+
+INSERT INTO `tax_rates` (`id`, `country`, `state`, `rate`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Philippines', 'Zambales', 2.00, 1, '2025-05-15 17:08:39', '2025-05-15 17:08:39');
+
 -- --------------------------------------------------------
 
 --
@@ -693,21 +800,26 @@ CREATE TABLE `users` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `mfa_secret` varchar(255) DEFAULT NULL,
-  `mfa_enabled` tinyint(1) DEFAULT 0
+  `mfa_enabled` tinyint(1) DEFAULT 0,
+  `google_id` varchar(255) DEFAULT NULL,
+  `google_access_token` text DEFAULT NULL,
+  `google_refresh_token` text DEFAULT NULL,
+  `google_profile_picture` varchar(255) DEFAULT NULL,
+  `is_google_account` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `role`, `reset_token`, `reset_token_expires`, `created_at`, `updated_at`, `mfa_secret`, `mfa_enabled`) VALUES
-(2, 'superadmin', 'superadmin@example.com', '$2y$10$PQD.Y8OPwoKV2TlHOYVxeOJaZAZKhHyXXhvZ5tqUGtxYsG0Ej4wPm', 'admin', NULL, NULL, '2025-03-13 04:13:17', '2025-03-13 04:13:17', NULL, 0),
-(3, 'kevin', 'kevin@gmail.com', '$2a$10$5Qtp8f0AziT5MNo3fwOPzuWC2YMXxQaCWZutR/YDj8igsgNRg.iV2', 'user', 'a4173a1f-a6c2-41f7-ab4c-be5d9917feb7', '2025-05-13 10:43:10', '2025-03-13 04:25:12', '2025-05-13 01:43:10', NULL, 0),
-(4, 'admin', 'admin@gmail.com', '$2a$10$ohXuuCfIS1UK6.ycVvAxcO2OlBAPSIOzVwbnnDDR0l4eBPR95xiMG', 'admin', NULL, NULL, '2025-03-13 04:32:01', '2025-03-13 04:32:01', NULL, 0),
-(5, 'lebron', 'lebron@gmail.com', '$2a$10$LQIpAd/VjX7b/H5eL1KhguT/wxh/hsdFyUhug.Bz5CgHNkn5FPNRe', 'user', NULL, NULL, '2025-03-13 07:49:35', '2025-03-13 07:49:35', NULL, 0),
-(6, 'edgar', 'edgar@gmail.com', '$2a$10$HvRjBsEArICXNNaMwfOB/OtQ4STe6ceY3hX7Iav9PXidEL6ahc/aS', 'user', NULL, NULL, '2025-04-01 05:23:14', '2025-04-01 05:23:14', NULL, 0),
-(7, 'kevinmilesjulhusin99', 'kevinmilesjulhusin99@gmail.com', '$2b$10$m8mJypp08l43Fbdq5TurA.1XJeBNXYT7tIVfHuK4.yuEJV5tLOgtO', 'user', NULL, NULL, '2025-05-13 01:31:55', '2025-05-13 02:05:24', NULL, 0),
-(8, 'kevin123', 'kevin123@gmail.com', '$2a$10$7ETpIpW/dw7EV1BkV7qia.hUhVeXolAnKk68GnBp.7WlKnoPuOxKq', 'user', NULL, NULL, '2025-05-13 16:11:55', '2025-05-13 16:11:55', NULL, 0);
+INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `role`, `reset_token`, `reset_token_expires`, `created_at`, `updated_at`, `mfa_secret`, `mfa_enabled`, `google_id`, `google_access_token`, `google_refresh_token`, `google_profile_picture`, `is_google_account`) VALUES
+(2, 'superadmin', 'superadmin@example.com', '$2y$10$PQD.Y8OPwoKV2TlHOYVxeOJaZAZKhHyXXhvZ5tqUGtxYsG0Ej4wPm', 'admin', NULL, NULL, '2025-03-13 04:13:17', '2025-03-13 04:13:17', NULL, 0, NULL, NULL, NULL, NULL, 0),
+(3, 'kevin', 'kevin@gmail.com', '$2a$10$5Qtp8f0AziT5MNo3fwOPzuWC2YMXxQaCWZutR/YDj8igsgNRg.iV2', 'user', 'a4173a1f-a6c2-41f7-ab4c-be5d9917feb7', '2025-05-13 10:43:10', '2025-03-13 04:25:12', '2025-05-13 01:43:10', NULL, 0, NULL, NULL, NULL, NULL, 0),
+(4, 'admin', 'admin@gmail.com', '$2a$10$ohXuuCfIS1UK6.ycVvAxcO2OlBAPSIOzVwbnnDDR0l4eBPR95xiMG', 'admin', NULL, NULL, '2025-03-13 04:32:01', '2025-03-13 04:32:01', NULL, 0, NULL, NULL, NULL, NULL, 0),
+(7, 'kevinmilesjulhusin99', 'kevinmilesjulhusin99@gmail.com', '$2b$10$m8mJypp08l43Fbdq5TurA.1XJeBNXYT7tIVfHuK4.yuEJV5tLOgtO', 'user', NULL, NULL, '2025-05-13 01:31:55', '2025-05-13 02:05:24', NULL, 0, NULL, NULL, NULL, NULL, 0),
+(8, 'kevin123', 'kevin123@gmail.com', '$2a$10$7ETpIpW/dw7EV1BkV7qia.hUhVeXolAnKk68GnBp.7WlKnoPuOxKq', 'user', NULL, NULL, '2025-05-13 16:11:55', '2025-05-13 16:11:55', NULL, 0, NULL, NULL, NULL, NULL, 0),
+(9, 'Jonie Catindig', 'joniecatindig@gmail.com', '', 'user', NULL, NULL, '2025-05-16 02:40:06', '2025-05-16 02:40:06', NULL, 0, '100889018279494773652', NULL, NULL, 'https://lh3.googleusercontent.com/a/ACg8ocLuGCvUA23HpCec0L7qmcc_OItKp6jdjgJ2mrzhOvE_PBrfMw=s96-c', 1),
+(10, 'Aba', 'abaewan214@gmail.com', '', 'user', NULL, NULL, '2025-05-16 03:01:30', '2025-05-16 03:01:30', NULL, 0, '115486721288550041401', NULL, NULL, 'https://lh3.googleusercontent.com/a/ACg8ocKjezHiEEqbK8jj9TAzA5hkNlaTBG2TsVTE9ELDUtptv8MwHg=s96-c', 1);
 
 --
 -- Triggers `users`
@@ -777,8 +889,10 @@ CREATE TABLE `user_profiles` (
 INSERT INTO `user_profiles` (`id`, `user_id`, `first_name`, `last_name`, `phone_number`, `address`, `city`, `state_province`, `country`, `postal_code`, `bio`, `date_of_birth`, `gender`, `created_at`, `updated_at`, `avatar_url`) VALUES
 (100, 3, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-13 18:03:32', '2025-05-13 18:03:32', NULL),
 (102, 4, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-13 18:04:23', '2025-05-13 18:04:23', NULL),
-(122, 8, 'Kevin Miles', 'Julhusin', '+6312345678911', '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 'as', '1990-11-05', 'male', '2025-05-14 02:18:51', '2025-05-15 16:36:55', '/uploads/avatars/avatar-1747327014989-162884240.jpg'),
-(493, 7, 'Kevin Miles', 'Julhusin', '+6312345678911', '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 'asd', NULL, NULL, '2025-05-15 13:00:28', '2025-05-15 15:37:16', NULL);
+(122, 8, 'Kevin Miles', 'Julhusin', '+6312345678911', '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejos', 'Zambales', 'Philippines', '2208', 'a handsome man', '1990-11-05', 'male', '2025-05-14 02:18:51', '2025-05-15 17:11:38', '/uploads/avatars/avatar-1747327014989-162884240.jpg'),
+(493, 7, 'Kevin Miles', 'Julhusin', '+6312345678911', '#297 Purok 5A, San Pablo  Castillejos Zambales', 'Castillejoz', 'Zambales', 'Philippines', '2208', 'asd', NULL, NULL, '2025-05-15 13:00:28', '2025-05-15 15:37:16', NULL),
+(495, 9, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-16 02:40:06', '2025-05-16 02:40:06', NULL),
+(496, 10, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2025-05-16 03:01:30', '2025-05-16 03:01:30', NULL);
 
 -- --------------------------------------------------------
 
@@ -1039,6 +1153,7 @@ ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`username`),
   ADD UNIQUE KEY `email` (`email`),
+  ADD UNIQUE KEY `google_id` (`google_id`),
   ADD KEY `idx_users_email` (`email`),
   ADD KEY `idx_users_username` (`username`),
   ADD KEY `idx_users_role` (`role`);
@@ -1082,13 +1197,13 @@ ALTER TABLE `wishlist_items`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `cart_items`
 --
 ALTER TABLE `cart_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `coupons`
@@ -1130,7 +1245,7 @@ ALTER TABLE `order_coupons`
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
 
 --
 -- AUTO_INCREMENT for table `prescriptions`
@@ -1202,13 +1317,13 @@ ALTER TABLE `suppliers`
 -- AUTO_INCREMENT for table `tax_rates`
 --
 ALTER TABLE `tax_rates`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `user_mfa`
@@ -1220,7 +1335,7 @@ ALTER TABLE `user_mfa`
 -- AUTO_INCREMENT for table `user_profiles`
 --
 ALTER TABLE `user_profiles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=495;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=497;
 
 --
 -- AUTO_INCREMENT for table `wishlist`

@@ -40,11 +40,32 @@ const OrderHistory = () => {
           throw new Error('Not authenticated');
         }
 
-        const response = await api.get('/orders/history');
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        console.log('Fetching orders with token:', token.substring(0, 10) + '...');
+        const response = await api.get('/api/orders/history');
+        
+        if (!response.data) {
+          throw new Error('No data received from server');
+        }
+        
         setOrders(response.data);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching orders:', err);
-        setError('Failed to load order history. Please try again later.');
+        let errorMessage = 'Failed to load order history. Please try again later.';
+        
+        if (err.response?.status === 401) {
+          errorMessage = 'Your session has expired. Please log in again.';
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+        } else if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        }
+        
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -175,7 +196,7 @@ const OrderHistory = () => {
         />
       )}
 
-      {orders.length === 0 ? (
+      {!orders || orders.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-gray-600">You haven't placed any orders yet.</p>
         </div>
@@ -233,7 +254,7 @@ const OrderHistory = () => {
                 </ul>
               </div>
 
-              <div className="mt-4 flex justify-end space-x-4">
+              <div className="flex gap-2 mt-4">
                 <button
                   onClick={() => handleTrackOrder(order.id)}
                   className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"

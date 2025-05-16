@@ -17,11 +17,11 @@ const isTokenExpired = (token: string) => {
     const decoded = jwtDecode<{ exp: number }>(token);
     const currentTime = Date.now() / 1000;
     
-    if (!decoded.exp) return true; // No expiration means risky, treat as expired
+    if (!decoded.exp) return true;
     return decoded.exp < currentTime;
   } catch (error) {
     console.error('Error decoding token:', error);
-    return true; // If we can't decode, assume it's expired
+    return true;
   }
 };
 
@@ -39,35 +39,43 @@ api.interceptors.request.use(
       }
       
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Request:', {
+        method: config.method?.toUpperCase(),
+        url: config.url,
+        tokenPreview: token.substring(0, 10) + '...'
+      });
+    } else {
+      console.log('No token found for request:', config.url);
     }
     
     return config;
   },
   (error) => {
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
 // Add a response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('Response:', {
+      status: response.status,
+      url: response.config.url,
+      data: response.data ? 'Data received' : 'No data'
+    });
+    return response;
+  },
   async (error) => {
-    const originalRequest = error.config;
+    console.error('Response error:', {
+      status: error.response?.status,
+      url: error.config?.url,
+      message: error.response?.data?.message || error.message
+    });
 
-    // If the error is due to an expired token
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      // Clear the token and redirect to login
+    if (error.response?.status === 401) {
       localStorage.removeItem('token');
       window.location.href = `/login?returnUrl=${encodeURIComponent(window.location.pathname)}`;
-      
-      return Promise.reject(error);
-    }
-
-    // Handle other errors
-    if (error.response?.status === 403) {
-      console.error('Access forbidden:', error.response.data);
     }
 
     return Promise.reject(error);

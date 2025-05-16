@@ -134,7 +134,10 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: CONFIG.FRONTEND_URL,
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Length', 'Content-Type']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -143,7 +146,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(session({
   secret: CONFIG.JWT_SECRET,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: {
+    secure: CONFIG.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: CONFIG.NODE_ENV === 'production' ? 'strict' : 'lax'
+  }
 }));
 
 // Initialize Passport and restore authentication state from session
