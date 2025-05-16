@@ -45,7 +45,7 @@ services:
         sync: false
       - key: DB_NAME
         sync: false
-      - key: VITE_PAYMONGO_PUBLIC_KEY
+      - key: PAYMONGO_PUBLIC_KEY
         value: pk_test_xoFM6owPGQNLYhKuXiWSaDgV
-      - key: VITE_PAYMONGO_SECRET_KEY
+      - key: PAYMONGO_SECRET_KEY
         sync: false 
