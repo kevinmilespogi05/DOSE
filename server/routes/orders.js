@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth.js';
 import { db } from '../../src/database/connection';
 import { generateInvoice } from '../../src/utils/invoiceGenerator';
 import fs from 'fs';
