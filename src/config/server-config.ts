@@ -13,18 +13,19 @@ const SERVER_CONFIG = {
     NAME: process.env.DB_NAME || 'project_db',
   },
   PAYMONGO: {
-    PUBLIC_KEY: process.env.VITE_PAYMONGO_PUBLIC_KEY,
-    SECRET_KEY: process.env.VITE_PAYMONGO_SECRET_KEY,
-    FRONTEND_URL: process.env.VITE_FRONTEND_URL || 'http://localhost:5173'
+    PUBLIC_KEY: process.env.PAYMONGO_PUBLIC_KEY || process.env.VITE_PAYMONGO_PUBLIC_KEY,
+    SECRET_KEY: process.env.PAYMONGO_SECRET_KEY || process.env.VITE_PAYMONGO_SECRET_KEY,
+    FRONTEND_URL: process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL || 'http://localhost:5173'
   }
 };
 
 // Validate required environment variables
 const requiredEnvVars = [
   'JWT_SECRET',
-  'VITE_PAYMONGO_PUBLIC_KEY',
-  'VITE_PAYMONGO_SECRET_KEY',
-  'VITE_FRONTEND_URL'
+  'DB_HOST',
+  'DB_USER',
+  'DB_PASSWORD',
+  'DB_NAME'
 ];
 
 requiredEnvVars.forEach(envVar => {
