@@ -169,83 +169,60 @@ const products: any[] = [];
 // Use JWT_SECRET from config
 const JWT_SECRET = CONFIG.JWT_SECRET;
 
-// Test database connection on server start
-testConnection();
+// Initialize database and start server
+async function initializeServer() {
+  try {
+    // Test database connection first
+    const isConnected = await testConnection();
+    if (!isConnected) {
+      console.error('Failed to connect to database after retries. Server will continue to run, but database features will be unavailable.');
+    } else {
+      // Only try to initialize database features if connection is successful
+      try {
+        await initializeAdmin();
+        console.log('Admin initialization completed');
 
-// Initialize admin on startup
-initializeAdmin();
+        // Create wishlist_items table if it doesn't exist
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS wishlist_items (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            user_id INT NOT NULL,
+            medicine_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_user_medicine (user_id, medicine_id),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
+          )
+        `);
+        console.log('Wishlist table check completed');
 
-// Create wishlist_items table if it doesn't exist
-pool.query(`
-  CREATE TABLE IF NOT EXISTS wishlist_items (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    medicine_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_user_medicine (user_id, medicine_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
-  )
-`).catch(error => {
-  console.error('Error creating wishlist_items table:', error);
-});
+        // Create review features if they don't exist
+        await pool.query(`
+          -- Check if columns exist
+          SELECT COUNT(*) AS column_count
+          FROM information_schema.COLUMNS 
+          WHERE TABLE_SCHEMA = DATABASE()
+        `);
+        console.log('Review features check completed');
+      } catch (error) {
+        console.error('Error during database initialization:', error);
+        console.log('Server will continue to run, but some features may be unavailable');
+      }
+    }
 
-// Add code to execute our rating review features migration
-
-// Create review features if they don't exist
-pool.query(`
-  -- Check if columns exist
-  SELECT COUNT(*) AS column_count
-  FROM information_schema.COLUMNS 
-  WHERE TABLE_SCHEMA = DATABASE() 
-    AND TABLE_NAME = 'ratings' 
-    AND COLUMN_NAME = 'is_verified_purchase'
-`).then((result: any) => {
-  const rowsAsArray = Array.isArray(result) ? result[0] : [result[0]];
-  const columnExists = rowsAsArray[0].column_count > 0;
-  
-  if (!columnExists) {
-    console.log('Adding review features to ratings table...');
-    
-    // Execute each statement separately to avoid SQL syntax errors
-    pool.query(`
-      -- Add verified purchase and moderation fields to ratings table
-      ALTER TABLE ratings
-      ADD COLUMN is_verified_purchase BOOLEAN DEFAULT FALSE,
-      ADD COLUMN status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
-      ADD COLUMN moderated_by INT NULL,
-      ADD COLUMN moderation_date TIMESTAMP NULL,
-      ADD COLUMN moderation_reason VARCHAR(255) NULL,
-      ADD CONSTRAINT fk_ratings_moderated_by FOREIGN KEY (moderated_by) REFERENCES users(id) ON DELETE SET NULL
-    `).then(() => {
-      // Create first index
-      return pool.query(`
-        -- Create index for faster filtering of ratings by status
-        CREATE INDEX idx_ratings_status ON ratings(status)
-      `);
-    }).then(() => {
-      // Create second index
-      return pool.query(`
-        -- Create index for faster lookup of ratings by medicine and status
-        CREATE INDEX idx_ratings_medicine_status ON ratings(medicine_id, status)
-      `);
-    }).then(() => {
-      // Update existing ratings
-      return pool.query(`
-        -- Update existing ratings to be approved
-        UPDATE ratings SET status = 'approved'
-      `);
-    }).then(() => {
-      console.log('Rating review features added successfully');
-    }).catch(error => {
-      console.error('Error adding rating review features:', error);
+    // Start the server regardless of database status
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
     });
-  } else {
-    console.log('Rating review features already exist');
+  } catch (error) {
+    console.error('Critical error during server initialization:', error);
+    process.exit(1);
   }
-}).catch(error => {
-  console.error('Error checking for rating review features:', error);
-});
+}
+
+// Initialize the server
+initializeServer();
 
 // Auth routes
 app.post('/api/auth/register', async (req, res) => {
@@ -1800,9 +1777,4 @@ app.get('/api/tax-rates', authenticateToken, async (req, res) => {
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
-});
-
-// Listen
-app.listen(CONFIG.PORT, () => {
-  console.log(`Server running on port ${CONFIG.PORT}`);
 });
