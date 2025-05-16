@@ -10,6 +10,8 @@ import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
 import ForgotPasswordForm from './components/auth/ForgotPasswordForm';
 import ResetPassword from './pages/ResetPassword';
+import GoogleAuthSuccess from './pages/GoogleAuthSuccess';
+import GoogleAuthError from './pages/GoogleAuthError';
 import Profile from './components/Profile';
 import ProductList from './components/products/ProductList';
 import ProductDetails from './components/products/ProductDetails';
@@ -90,7 +92,14 @@ const PublicRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => 
 function AppContent() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
-  const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname);
+  const isAuthPage = [
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/auth/google/success',
+    '/auth/google/error'
+  ].includes(location.pathname);
 
   return (
     <div className="d-flex flex-column min-vh-100">
@@ -105,6 +114,10 @@ function AppContent() {
               <Route path="/register" element={<PublicRoute element={<RegisterForm />} />} />
               <Route path="/forgot-password" element={<PublicRoute element={<ForgotPasswordForm />} />} />
               <Route path="/reset-password" element={<PublicRoute element={<ResetPassword />} />} />
+              
+              {/* Google Auth Routes */}
+              <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
+              <Route path="/auth/google/error" element={<GoogleAuthError />} />
               
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminRoute element={<AdminDashboard />} />} />

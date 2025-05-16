@@ -7,6 +7,7 @@ import { loginSchema, mfaTokenSchema, type LoginFormData, type MFACredentials } 
 import { UserRound } from 'lucide-react';
 import { showErrorAlert, showSuccessAlert } from '../../utils/alerts';
 import api from '../../lib/api';
+import GoogleSignInButton from '../GoogleSignInButton';
 
 const LoginForm = () => {
   const { login, setUser, setIsAuthenticated } = useAuth();
@@ -179,7 +180,20 @@ const LoginForm = () => {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmitLogin(onSubmit)}>
+        <div className="mt-8">
+          <GoogleSignInButton className="mb-4" />
+          
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-50 text-gray-500">Or continue with</span>
+            </div>
+          </div>
+        </div>
+
+        <form className="mt-6 space-y-6" onSubmit={handleSubmitLogin(onSubmit)}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email" className="sr-only">

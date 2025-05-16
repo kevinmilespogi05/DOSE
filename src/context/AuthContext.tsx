@@ -15,6 +15,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  handleGoogleAuthSuccess: (token: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -196,19 +197,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     navigate('/login');
   };
 
+  const handleGoogleAuthSuccess = async (token: string) => {
+    try {
+      localStorage.setItem('token', token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      // Decode token to get user info
+      const decoded = jwtDecode(token) as { userId: number; role: string };
+      
+      // Fetch user profile
+      const response = await api.get('/user/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const userData = {
+        ...response.data,
+        role: decoded.role
+      };
+      
+      setUser(userData);
+      setIsAuthenticated(true);
+      
+      navigate('/shop');
+    } catch (error) {
+      console.error('Google auth error:', error);
+      showErrorAlert('Authentication Failed', 'Failed to process Google sign-in');
+    }
+  };
+
   const isAdmin = user?.role === 'admin';
 
+  const value = {
+    user,
+    setUser,
+    setIsAuthenticated,
+    login,
+    register,
+    logout,
+    isAuthenticated,
+    isAdmin,
+    handleGoogleAuthSuccess
+  };
+
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      setUser,
-      setIsAuthenticated,
-      login, 
-      register, 
-      logout, 
-      isAuthenticated, 
-      isAdmin 
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

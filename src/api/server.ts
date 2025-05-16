@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -8,6 +8,8 @@ import CONFIG from '../config/config';
 import { upload, processImage } from '../utils/imageUpload';
 import { RowDataPacket, Connection } from 'mysql2/promise';
 import path from 'path';
+import passport from 'passport';
+import session from 'express-session';
 import paymongoRoutes from './routes/paymongo';
 import prescriptionRoutes from './routes/prescriptions';
 import authRoutes from './routes/auth';
@@ -28,6 +30,24 @@ import promotionsRoutes from './routes/promotions';
 import shippingRoutes from './routes/admin/shipping';
 import inventoryRouter from './routes/inventory';
 import { initializeDatabase } from '../database/init';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import googleConfig from '../config/google';
+
+interface User extends RowDataPacket {
+  id: number;
+  email: string;
+  role: string;
+}
+
+declare global {
+  namespace Express {
+    interface User extends RowDataPacket {
+      id: number;
+      email: string;
+      role: string;
+    }
+  }
+}
 
 // Authentication middleware
 const authenticateToken = (req: any, res: any, next: any) => {
@@ -111,14 +131,108 @@ async function initializeAdmin() {
 
 const app = express();
 
+// Middleware
 app.use(cors({
-  origin: [process.env.CORS_ORIGIN || 'http://localhost:5173', 'https://dosebsit.netlify.app'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: CONFIG.FRONTEND_URL,
+  credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Session configuration
+app.use(session({
+  secret: CONFIG.JWT_SECRET,
+  resave: false,
+  saveUninitialized: false
+}));
+
+// Initialize Passport and restore authentication state from session
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Configure Google Strategy
+passport.use(new GoogleStrategy({
+  clientID: googleConfig.clientID,
+  clientSecret: googleConfig.clientSecret,
+  callbackURL: googleConfig.callbackURL,
+  passReqToCallback: true
+}, async (req, accessToken, refreshToken, profile, done) => {
+  try {
+    // Check if user exists
+    const [users] = await pool.query(
+      'SELECT * FROM users WHERE google_id = ? OR email = ?',
+      [profile.id, profile.emails?.[0]?.value]
+    );
+
+    if (users.length > 0) {
+      // Update existing user
+      const user = users[0];
+      await pool.query(
+        `UPDATE users SET 
+         google_id = ?,
+         google_access_token = ?,
+         google_refresh_token = ?,
+         google_profile_picture = ?,
+         is_google_account = 1
+         WHERE id = ?`,
+        [
+          profile.id,
+          accessToken,
+          refreshToken,
+          profile.photos?.[0]?.value,
+          user.id
+        ]
+      );
+      return done(null, user);
+    }
+
+    // Create new user
+    const [result] = await pool.query(
+      `INSERT INTO users (
+        username,
+        email,
+        google_id,
+        google_access_token,
+        google_refresh_token,
+        google_profile_picture,
+        is_google_account,
+        role
+      ) VALUES (?, ?, ?, ?, ?, ?, 1, 'user')`,
+      [
+        profile.displayName || profile.emails?.[0]?.value?.split('@')[0],
+        profile.emails?.[0]?.value,
+        profile.id,
+        accessToken,
+        refreshToken,
+        profile.photos?.[0]?.value
+      ]
+    );
+
+    const newUser = {
+      id: result.insertId,
+      email: profile.emails?.[0]?.value,
+      role: 'user'
+    };
+
+    return done(null, newUser);
+  } catch (error) {
+    return done(error as Error);
+  }
+}));
+
+// Passport serialization
+passport.serializeUser((user: any, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id: number, done) => {
+  try {
+    const [users] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
+    done(null, users[0] || null);
+  } catch (error) {
+    done(error, null);
+  }
+});
 
 // Serve static files from public directory
 app.use(express.static('public'));
@@ -140,7 +254,7 @@ app.use((req, res, next) => {
 });
 
 // Mount routes
-app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
 app.use('/api/mfa', mfaRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/wishlist', wishlistRoutes);
@@ -1792,9 +1906,13 @@ app.get('/api/tax-rates', authenticateToken, async (req, res) => {
 });
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error('Server error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: err.message,
+    stack: CONFIG.NODE_ENV === 'development' ? err.stack : undefined
+  });
 });
 
 // Initialize database and start server

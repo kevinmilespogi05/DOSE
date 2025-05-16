@@ -12,6 +12,9 @@ import { v4 as uuidv4 } from 'uuid';
 import speakeasy from 'speakeasy';
 import { Request, Response } from 'express';
 import { RowDataPacket, ResultSetHeader, FieldPacket } from 'mysql2/promise';
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import googleConfig from '../../config/google';
 
 interface User extends RowDataPacket {
   id: number;
@@ -29,6 +32,105 @@ interface AuthRequest extends Request {
 }
 
 const router = Router();
+
+// Configure Google Strategy
+passport.use(new GoogleStrategy({
+  clientID: googleConfig.clientID,
+  clientSecret: googleConfig.clientSecret,
+  callbackURL: googleConfig.callbackURL,
+  passReqToCallback: true
+}, async (req, accessToken, refreshToken, profile, done) => {
+  try {
+    // Check if user exists
+    const [users] = await pool.query(
+      'SELECT * FROM users WHERE google_id = ? OR email = ?',
+      [profile.id, profile.emails?.[0]?.value]
+    );
+
+    if (users.length > 0) {
+      // Update existing user
+      const user = users[0];
+      await pool.query(
+        `UPDATE users SET 
+         google_id = ?,
+         google_access_token = ?,
+         google_refresh_token = ?,
+         google_profile_picture = ?,
+         is_google_account = 1
+         WHERE id = ?`,
+        [
+          profile.id,
+          accessToken,
+          refreshToken,
+          profile.photos?.[0]?.value,
+          user.id
+        ]
+      );
+      return done(null, user);
+    }
+
+    // Create new user
+    const [result] = await pool.query(
+      `INSERT INTO users (
+        username,
+        email,
+        google_id,
+        google_access_token,
+        google_refresh_token,
+        google_profile_picture,
+        is_google_account,
+        role
+      ) VALUES (?, ?, ?, ?, ?, ?, 1, 'user')`,
+      [
+        profile.displayName || profile.emails?.[0]?.value?.split('@')[0],
+        profile.emails?.[0]?.value,
+        profile.id,
+        accessToken,
+        refreshToken,
+        profile.photos?.[0]?.value
+      ]
+    );
+
+    const newUser = {
+      id: result.insertId,
+      email: profile.emails?.[0]?.value,
+      role: 'user'
+    };
+
+    return done(null, newUser);
+  } catch (error) {
+    return done(error as Error);
+  }
+}));
+
+// Google Auth Routes
+router.get('/google',
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    accessType: 'offline',
+    prompt: 'consent'
+  })
+);
+
+router.get('/google/callback',
+  passport.authenticate('google', { session: false }),
+  (req: Request, res: Response) => {
+    try {
+      const user = req.user as any;
+      const token = jwt.sign(
+        { userId: user.id, role: user.role },
+        CONFIG.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      // Redirect to frontend with token
+      res.redirect(`${CONFIG.FRONTEND_URL}/auth/google/success?token=${token}`);
+    } catch (error) {
+      console.error('Google callback error:', error);
+      res.redirect(`${CONFIG.FRONTEND_URL}/auth/google/error`);
+    }
+  }
+);
 
 // Forgot password request
 router.post('/forgot-password', 

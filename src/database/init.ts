@@ -8,14 +8,19 @@ async function initializeDatabase() {
         id INT PRIMARY KEY AUTO_INCREMENT,
         username VARCHAR(50) NOT NULL UNIQUE,
         email VARCHAR(100) NOT NULL UNIQUE,
-        password_hash VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255),
         role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
         reset_token VARCHAR(255),
         reset_token_expires DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         mfa_secret VARCHAR(255),
-        mfa_enabled TINYINT(1) DEFAULT 0
+        mfa_enabled TINYINT(1) DEFAULT 0,
+        google_id VARCHAR(255),
+        google_access_token TEXT,
+        google_refresh_token TEXT,
+        google_profile_picture VARCHAR(255),
+        is_google_account TINYINT(1) DEFAULT 0
       )
     `);
 
