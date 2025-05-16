@@ -10,12 +10,12 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "tsx src/api/server.ts",
     "migrate": "tsx src/database/migrations/004_create_orders_and_payments.ts",
     "migrate:prescriptions": "tsx src/database/migrations/005_update_prescriptions.ts",
     "migrate:features": "tsx src/database/migrations/006_user_profiles_and_features.ts",
     "migrate:coupons": "tsx src/database/migrations/007_create_coupons_table.ts",
-    "migrate:promotions": "tsx src/database/migrations/008_create_promotions_table.ts"
+    "migrate:promotions": "tsx src/database/migrations/008_create_promotions_table.ts",
+    "migrate:prod": "tsx src/database/migrations/004_create_orders_and_payments.ts && tsx src/database/migrations/005_update_prescriptions.ts && tsx src/database/migrations/006_user_profiles_and_features.ts && tsx src/database/migrations/007_create_coupons_table.ts && tsx src/database/migrations/008_create_promotions_table.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -68,9 +68,7 @@
     "sweetalert2": "^11.19.1",
     "swiper": "^11.2.6",
     "tailwind-merge": "^2.6.0",
-    "tsx": "^4.19.3",
     "twilio": "^4.22.0",
-    "typescript": "^5.5.3",
     "uuid": "^11.1.0",
     "zod": "^3.22.4"
   },
@@ -101,6 +99,8 @@
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0",
     "vite": "^5.4.2"
   }

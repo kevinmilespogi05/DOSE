@@ -16,8 +16,8 @@ const CONFIG = {
     NAME: process?.env?.DB_NAME || 'project_db',
   },
   PAYMONGO: {
-    PUBLIC_KEY: process.env.VITE_PAYMONGO_PUBLIC_KEY || 'dummy_key',
-    SECRET_KEY: process.env.VITE_PAYMONGO_SECRET_KEY || 'dummy_key',
+    PUBLIC_KEY: process.env.VITE_PAYMONGO_PUBLIC_KEY,
+    SECRET_KEY: process.env.VITE_PAYMONGO_SECRET_KEY,
     FRONTEND_URL: process.env.VITE_FRONTEND_URL || 'http://localhost:5173'
   }
 };
@@ -25,11 +25,7 @@ const CONFIG = {
 // Only validate environment variables in Node.js environment
 if (typeof process !== 'undefined') {
   const requiredEnvVars = [
-    'JWT_SECRET'
-  ];
-
-  // Optional but recommended variables in production
-  const recommendedEnvVars = [
+    'JWT_SECRET',
     'VITE_PAYMONGO_PUBLIC_KEY',
     'VITE_PAYMONGO_SECRET_KEY',
     'VITE_FRONTEND_URL'
@@ -44,14 +40,6 @@ if (typeof process !== 'undefined') {
       }
     }
   });
-
-  if (CONFIG.NODE_ENV === 'production') {
-    recommendedEnvVars.forEach(envVar => {
-      if (!process.env[envVar]) {
-        console.warn(`Warning: Missing recommended environment variable in production: ${envVar}`);
-      }
-    });
-  }
 }
 
 export default CONFIG;
