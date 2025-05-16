@@ -12,8 +12,8 @@ async function initializeDatabase() {
         role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
         reset_token VARCHAR(255),
         reset_token_expires DATETIME,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         mfa_secret VARCHAR(255),
         mfa_enabled TINYINT(1) DEFAULT 0
       )
@@ -25,7 +25,7 @@ async function initializeDatabase() {
         id INT PRIMARY KEY AUTO_INCREMENT,
         name VARCHAR(50) NOT NULL,
         description TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -38,8 +38,8 @@ async function initializeDatabase() {
         email VARCHAR(100) UNIQUE,
         phone VARCHAR(20),
         address TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
 
@@ -63,8 +63,8 @@ async function initializeDatabase() {
         reorder_point INT DEFAULT 20,
         image_url VARCHAR(255) DEFAULT 'https://via.placeholder.com/400x300?text=Medicine+Image',
         barcode VARCHAR(50),
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         average_rating DECIMAL(3,2) DEFAULT 0.00,
         FOREIGN KEY (category_id) REFERENCES medicine_categories(id),
         FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
@@ -79,8 +79,8 @@ async function initializeDatabase() {
         medicine_id INT NOT NULL,
         rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
         review TEXT,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         is_verified_purchase BOOLEAN DEFAULT FALSE,
         status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
         moderated_by INT,
@@ -97,7 +97,7 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS cart (
         id INT PRIMARY KEY AUTO_INCREMENT,
         user_id INT NOT NULL,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
@@ -120,7 +120,7 @@ async function initializeDatabase() {
         id INT PRIMARY KEY AUTO_INCREMENT,
         user_id INT NOT NULL,
         medicine_id INT NOT NULL,
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY unique_user_medicine (user_id, medicine_id),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
@@ -144,8 +144,8 @@ async function initializeDatabase() {
         date_of_birth DATE,
         gender ENUM('male', 'female', 'other', 'prefer_not_to_say'),
         avatar_url VARCHAR(255),
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         UNIQUE KEY unique_user_profile (user_id),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
