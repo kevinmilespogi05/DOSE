@@ -14,8 +14,8 @@ const dbConfig = {
   connectionLimit: 10,
   queueLimit: 0,
   connectTimeout: 60000, // 60 seconds
-  acquireTimeout: 60000, // 60 seconds
-  timeout: 60000, // 60 seconds
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
   ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: false
   } : undefined
@@ -24,18 +24,23 @@ const dbConfig = {
 // Create a connection pool
 const pool = mysql.createPool(dbConfig);
 
-// Function to retry connection
-async function retryConnection(maxRetries = 5, delay = 5000) {
+// Function to retry connection with exponential backoff
+async function retryConnection(maxRetries = 5, initialDelay = 5000) {
   for (let i = 0; i < maxRetries; i++) {
     try {
       const connection = await pool.getConnection();
       console.log('Database connected successfully');
       console.log(`Connected to ${dbConfig.database} at ${dbConfig.host}:${dbConfig.port}`);
+      
+      // Test the connection with a simple query
+      await connection.query('SELECT 1');
+      
       connection.release();
       return true;
     } catch (error) {
       console.error(`Connection attempt ${i + 1}/${maxRetries} failed:`, error);
       if (i < maxRetries - 1) {
+        const delay = initialDelay * Math.pow(2, i); // Exponential backoff
         console.log(`Retrying in ${delay/1000} seconds...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
@@ -65,10 +70,18 @@ async function testConnection() {
         console.error(`Database "${dbConfig.database}" does not exist. Create it before running the application.`);
       } else if (error.message.includes('ETIMEDOUT')) {
         console.error('Connection timed out. Check your network connection and database host.');
+      } else if (error.message.includes('PROTOCOL_CONNECTION_LOST')) {
+        console.error('Connection lost. The server closed the connection.');
       }
     }
     return false;
   }
 }
+
+// Enable connection pool error handling
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+  process.exit(-1);
+});
 
 export { pool, testConnection }; 
