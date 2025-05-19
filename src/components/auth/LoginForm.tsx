@@ -8,9 +8,10 @@ import { UserRound } from 'lucide-react';
 import { showErrorAlert, showSuccessAlert } from '../../utils/alerts';
 import api from '../../lib/api';
 import GoogleSignInButton from '../GoogleSignInButton';
+import jwtDecode from 'jwt-decode';
 
 const LoginForm = () => {
-  const { login, setUser, setIsAuthenticated } = useAuth();
+  const { login, setUser, setIsAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [showMFA, setShowMFA] = useState(false);
   const [email, setEmail] = useState('');
@@ -43,7 +44,8 @@ const LoginForm = () => {
         setShowMFA(true);
       } else {
         showSuccessAlert('Success', 'Login successful');
-        navigate('/shop');
+        const userRole = response.user?.role;
+        navigate(userRole === 'admin' ? '/admin' : '/shop');
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -81,7 +83,8 @@ const LoginForm = () => {
         setIsAuthenticated(true);
 
         showSuccessAlert('Success', 'Login successful');
-        navigate('/shop');
+        const userRole = response.data.user?.role;
+        navigate(userRole === 'admin' ? '/admin' : '/shop');
       } else {
         showErrorAlert('Error', 'Invalid response from server');
       }

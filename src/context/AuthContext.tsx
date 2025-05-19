@@ -123,7 +123,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Login response:', JSON.stringify({
         status: response.status,
         hasToken: !!response.data.token,
-        hasUser: !!response.data.user
+        hasUser: !!response.data.user,
+        userRole: response.data.user?.role
       }));
       
       if (response.data.requiresMFA) {
@@ -134,17 +135,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('token', response.data.token);
         api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
         
-        // Decode token to get user info
-        const decoded = jwtDecode(response.data.token) as { id: number; role: string };
-        console.log('Token decoded successfully, role:', decoded.role);
-        
-        const userData = {
-          ...response.data.user,
-          role: decoded.role // Always use role from token
-        };
+        // Get user data from response
+        const userData = response.data.user;
+        if (!userData) {
+          throw new Error('No user data in response');
+        }
         
         setUser(userData);
         setIsAuthenticated(true);
+        
+        console.log('User authenticated successfully as', userData.role);
       } else {
         console.error('No token in login response:', response.data);
       }
@@ -220,7 +220,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userData);
       setIsAuthenticated(true);
       
-      navigate('/shop');
+      // Navigate based on user role
+      navigate(decoded.role === 'admin' ? '/admin' : '/shop');
     } catch (error) {
       console.error('Google auth error:', error);
       showErrorAlert('Authentication Failed', 'Failed to process Google sign-in');
